@@ -23,7 +23,9 @@ from app.schemas.product import (
     ProductCreateRequest,
     ProductDetailResponse,
 )
+from app.schemas.order import RefundResponse, ReviewAuditRequest, ReviewResponse, OrderResponse
 from app.services.auth_service import auth_service
+from app.services.order_service import order_service
 from app.services.product_service import product_service
 from app.utils.response import ApiResponse, success
 
@@ -159,3 +161,76 @@ async def unpublish_product(
 ) -> ApiResponse[ProductDetailResponse]:
     product = await product_service.unpublish_product(db, product_id)
     return success(product_service.to_detail_response(product))
+
+
+@router.post("/orders/{order_id}/ship", response_model=ApiResponse[OrderResponse])
+async def ship_order(
+    order_id: int,
+    db: DbSession,
+    _: AdminUser = Depends(get_current_admin),
+) -> ApiResponse[OrderResponse]:
+    return success(await order_service.ship_order(db, order_id))
+
+
+@router.post("/reviews/{review_id}/audit", response_model=ApiResponse[ReviewResponse])
+async def audit_review(
+    review_id: int,
+    payload: ReviewAuditRequest,
+    db: DbSession,
+    _: AdminUser = Depends(get_current_admin),
+) -> ApiResponse[ReviewResponse]:
+    return success(await order_service.audit_review(db, review_id, payload.approved))
+
+
+@router.get("/refunds", response_model=ApiResponse[dict])
+async def list_refunds(
+    db: DbSession,
+    _: AdminUser = Depends(get_current_admin),
+    page: int = 1,
+    page_size: int = 20,
+) -> ApiResponse[dict]:
+    refunds, total = await order_service.list_refunds(db, page=page, page_size=page_size)
+    return success(
+        {
+            "list": [refund.model_dump() for refund in refunds],
+            "page": page,
+            "page_size": page_size,
+            "total": total,
+        }
+    )
+
+
+@router.post("/refunds/{refund_id}/approve", response_model=ApiResponse[RefundResponse])
+async def approve_refund(
+    refund_id: int,
+    db: DbSession,
+    _: AdminUser = Depends(get_current_admin),
+) -> ApiResponse[RefundResponse]:
+    return success(await order_service.approve_refund(db, refund_id))
+
+
+@router.post("/refunds/{refund_id}/reject", response_model=ApiResponse[RefundResponse])
+async def reject_refund(
+    refund_id: int,
+    db: DbSession,
+    _: AdminUser = Depends(get_current_admin),
+) -> ApiResponse[RefundResponse]:
+    return success(await order_service.reject_refund(db, refund_id))
+
+
+@router.post("/refunds/{refund_id}/receive", response_model=ApiResponse[RefundResponse])
+async def receive_refund(
+    refund_id: int,
+    db: DbSession,
+    _: AdminUser = Depends(get_current_admin),
+) -> ApiResponse[RefundResponse]:
+    return success(await order_service.receive_refund(db, refund_id))
+
+
+@router.post("/refunds/{refund_id}/refund", response_model=ApiResponse[RefundResponse])
+async def finish_refund(
+    refund_id: int,
+    db: DbSession,
+    _: AdminUser = Depends(get_current_admin),
+) -> ApiResponse[RefundResponse]:
+    return success(await order_service.finish_refund(db, refund_id))

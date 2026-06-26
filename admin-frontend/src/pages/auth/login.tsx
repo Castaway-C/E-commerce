@@ -13,10 +13,10 @@ export function AdminLoginPage() {
     event.preventDefault()
     setMessage('')
     try {
-      await adminAuthService.login({ username, password })
+      await adminAuthService.login({ username: username.trim(), password })
       navigate('/dashboard')
     } catch {
-      setMessage('登录失败，请检查管理员账号和密码')
+      setMessage('登录失败，请检查账号、密码是否正确，密码长度需为 8-64 位')
     }
   }
 
@@ -26,11 +26,17 @@ export function AdminLoginPage() {
       <form onSubmit={handleSubmit}>
         <label>
           管理员账号
-          <input value={username} onChange={(event) => setUsername(event.target.value)} />
+          <input value={username} maxLength={50} onChange={(event) => setUsername(event.target.value)} />
         </label>
         <label>
           密码
-          <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} />
+          <input
+            type="password"
+            value={password}
+            minLength={8}
+            maxLength={64}
+            onChange={(event) => setPassword(event.target.value)}
+          />
         </label>
         <button type="submit">登录</button>
       </form>

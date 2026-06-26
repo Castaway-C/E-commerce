@@ -12,6 +12,13 @@ export type ProductListItem = {
   tags: string[]
 }
 
+export type ProductDetail = {
+  id: number
+  name: string
+  description: string
+  skus: Array<{ id: number; name: string; price_cent: number; stock: number }>
+}
+
 export type PageResult<T> = {
   list: T[]
   page: number
@@ -22,5 +29,9 @@ export type PageResult<T> = {
 export const productService = {
   listProducts() {
     return http.get<unknown, { data: PageResult<ProductListItem> }>('/products')
+  },
+
+  getProduct(productId: number) {
+    return http.get<unknown, { data: ProductDetail }>(`/products/${productId}`)
   },
 }

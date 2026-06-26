@@ -21,16 +21,29 @@ export type ProductCreatePayload = {
   }>
 }
 
+export type Merchant = {
+  id: number
+  name: string
+}
+
+export type ProductDetail = {
+  id: number
+  name: string
+  status: string
+  merchant: Merchant
+  skus: Array<{ id: number; name: string; price_cent: number; stock: number }>
+}
+
 export const adminProductService = {
   createMerchant(payload: MerchantCreatePayload) {
-    return http.post('/admin/merchants', payload)
+    return http.post<unknown, { data: Merchant }>('/admin/merchants', payload)
   },
 
   createProduct(payload: ProductCreatePayload) {
-    return http.post('/admin/products', payload)
+    return http.post<unknown, { data: ProductDetail }>('/admin/products', payload)
   },
 
   publishProduct(productId: number) {
-    return http.post(`/admin/products/${productId}/publish`)
+    return http.post<unknown, { data: ProductDetail }>(`/admin/products/${productId}/publish`)
   },
 }

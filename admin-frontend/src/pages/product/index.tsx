@@ -7,10 +7,12 @@ export function ProductAdminPage() {
   const [productName, setProductName] = useState('')
   const [price, setPrice] = useState('99')
   const [message, setMessage] = useState('')
+  const [createdInfo, setCreatedInfo] = useState('')
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setMessage('')
+    setCreatedInfo('')
     try {
       const merchantResponse = await adminProductService.createMerchant({ name: merchantName })
       const merchantId = merchantResponse.data.id
@@ -21,8 +23,12 @@ export function ProductAdminPage() {
         image_urls: [],
         skus: [{ name: '默认规格', price_cent: Number(price) * 100, stock: 10 }],
       })
-      await adminProductService.publishProduct(productResponse.data.id)
+      const publishResponse = await adminProductService.publishProduct(productResponse.data.id)
+      const firstSku = publishResponse.data.skus[0]
       setMessage('商品已创建并上架')
+      setCreatedInfo(
+        `店铺ID：${merchantId}；商品ID：${publishResponse.data.id}；SKU ID：${firstSku?.id ?? '无'}`,
+      )
     } catch {
       setMessage('创建失败，请检查管理员登录状态和表单内容')
     }
@@ -47,6 +53,8 @@ export function ProductAdminPage() {
         <button type="submit">创建并上架</button>
       </form>
       {message && <p>{message}</p>}
+      {createdInfo && <p>{createdInfo}</p>}
+      <p>提示：创建成功后，用户端商品列表会显示该商品，可直接加入购物车测试。</p>
     </main>
   )
 }

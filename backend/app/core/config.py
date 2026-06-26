@@ -16,7 +16,13 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_access_token_expire_minutes: int = 30
     jwt_refresh_token_expire_days: int = 7
-    cors_allow_origins: list[str] = ["http://localhost:5173", "http://localhost:5174"]
+    cors_allow_origins: list[str] = [
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:5174",
+    ]
+    cors_allow_origin_regex: str | None = r"^https?://(localhost|127\.0\.0\.1):\d+$"
     upload_dir: str = "uploads"
     upload_max_size_mb: int = 5
 
