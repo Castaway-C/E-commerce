@@ -4,7 +4,9 @@
 
 - 本文档只描述普通用户端账号，不包含后台管理员。
 - 需要登录的接口必须携带 `Authorization: Bearer <access_token>`。
-- 密码由后端使用 Bcrypt 加盐哈希保存。
+- 密码由后端先做 SHA-256 摘要，再使用 Bcrypt 加盐哈希保存，避免 Bcrypt 72 字节输入限制。
+- 当前阶段已实现注册、登录、刷新、登出、当前用户资料查询。
+- 登出已支持 token 拉黑；当前实现为内存黑名单，后续接 Redis TTL 持久化。
 
 ## POST `/auth/register`
 
@@ -64,6 +66,20 @@
 ## POST `/auth/logout`
 
 登出并拉黑当前 token。
+
+### 请求头
+
+`Authorization: Bearer <access_token>`
+
+### 响应
+
+```json
+{ "code": 0, "message": "ok", "data": null }
+```
+
+## GET `/auth/me`
+
+获取当前登录用户资料，等价于 `/users/profile`。
 
 ## GET `/users/profile`
 

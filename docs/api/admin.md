@@ -16,6 +16,48 @@
 | GET | `/auth/me` | 当前管理员 |
 | GET | `/auth/menus` | 菜单树和权限点 |
 
+### 当前阶段实现说明
+
+- 已实现管理端登录、刷新、登出、当前管理员、菜单占位接口。
+- 管理员账号不走普通用户注册接口，可先通过 `backend/scripts/create_admin.py` 创建初始账号，后续再由平台运营创建。
+- `platform_operator` 和 `merchant_operator` 使用同一登录接口，但权限边界由 `role` 和 `merchant_id` 决定。
+- 登出已支持 token 拉黑；当前实现为内存黑名单，后续接 Redis TTL 持久化。
+
+### POST `/auth/login`
+
+请求：
+
+```json
+{ "username": "admin", "password": "12345678" }
+```
+
+响应：
+
+```json
+{
+  "code": 0,
+  "message": "ok",
+  "data": {
+    "access_token": "jwt",
+    "refresh_token": "jwt",
+    "token_type": "Bearer",
+    "expires_in": 1800
+  }
+}
+```
+
+### GET `/auth/me`
+
+响应字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| id | number | 管理员 ID |
+| username | string | 登录名 |
+| real_name | string | 姓名 |
+| role | string | platform_operator/merchant_operator |
+| merchant_id | number/null | 绑定店铺 ID |
+
 ## 商品与店铺
 
 | 方法 | 路径 | platform_operator | merchant_operator |

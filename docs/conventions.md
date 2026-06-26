@@ -22,3 +22,12 @@
 - `merchant_operator` 只能访问本店数据。
 - `platform_operator` 可以访问平台级数据。
 
+## 第一阶段实现约定
+
+- 认证 token 中使用 `account_type` 区分 `consumer` 和 `admin`。
+- 普通用户表为 `user`，管理员表为 `admin_user`。
+- 密码存储使用 SHA-256 摘要 + Bcrypt 加盐哈希。
+- 登出黑名单当前使用内存实现，后续接 Redis 时保持接口不变。
+- 开发环境允许自动建表，迁移脚本在后续模型稳定后补齐。
+- 用户端 token 存储键名为 `user_access_token`、`user_refresh_token`。
+- 管理端 token 存储键名为 `admin_access_token`、`admin_refresh_token`。
