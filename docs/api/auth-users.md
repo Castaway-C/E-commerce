@@ -102,6 +102,8 @@
 
 ## 地址接口
 
+当前阶段已实现用户收货地址的基础增删改查。地址属于普通用户账号，后台管理员不可混用。
+
 | 方法 | 路径 | 说明 |
 |---|---|---|
 | GET | `/addresses` | 地址列表 |
@@ -121,9 +123,90 @@
 | detail_address | string | 是 | 详细地址 |
 | is_default | boolean | 否 | 是否默认 |
 
+### POST `/addresses`
+
+新增收货地址。当前用户第一条地址会自动成为默认地址；创建或修改地址时设置 `is_default=true` 会取消其它默认地址。
+
+#### 请求
+
+```json
+{
+  "receiver_name": "张三",
+  "receiver_mobile": "13800000000",
+  "province": "广东省",
+  "city": "深圳市",
+  "district": "南山区",
+  "detail_address": "科技园测试路 1 号",
+  "is_default": true
+}
+```
+
+#### 响应
+
+```json
+{
+  "code": 0,
+  "message": "ok",
+  "data": {
+    "id": 1,
+    "user_id": 1,
+    "receiver_name": "张三",
+    "receiver_mobile": "13800000000",
+    "province": "广东省",
+    "city": "深圳市",
+    "district": "南山区",
+    "detail_address": "科技园测试路 1 号",
+    "is_default": true
+  }
+}
+```
+
+### PUT `/addresses/{id}`
+
+局部修改地址。只传需要修改的字段即可。
+
+### DELETE `/addresses/{id}`
+
+删除地址。删除默认地址后，系统会把当前用户剩余地址中的一条设为默认。
+
 ## GET `/users/points/logs`
 
 分页获取积分流水。
+
+查询参数：
+
+| 参数 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| page | number | 否 | 页码，默认 1 |
+| page_size | number | 否 | 每页数量，默认 20 |
+
+响应：
+
+```json
+{
+  "code": 0,
+  "message": "ok",
+  "data": {
+    "list": [
+      {
+        "id": 1,
+        "user_id": 1,
+        "change_points": 10,
+        "balance_points": 10,
+        "source_type": "grass_conversion",
+        "source_id": 100,
+        "description": "种草订单确认收货奖励",
+        "created_at": "2026-06-27T10:00:00"
+      }
+    ],
+    "page": 1,
+    "page_size": 20,
+    "total": 1
+  }
+}
+```
+
+当前积分流水由统一积分服务写入，后续签到、会员成长、积分抵扣都应复用该服务，不直接修改 `user.points`。
 
 ## 错误码
 

@@ -4,6 +4,8 @@ import { adminOrderService, type Refund } from '../../services/order'
 
 export function OrderAdminPage() {
   const [orderId, setOrderId] = useState('')
+  const [logisticsCompany, setLogisticsCompany] = useState('SF Express')
+  const [trackingNo, setTrackingNo] = useState('')
   const [reviewId, setReviewId] = useState('')
   const [refunds, setRefunds] = useState<Refund[]>([])
   const [message, setMessage] = useState('')
@@ -20,7 +22,10 @@ export function OrderAdminPage() {
   async function handleShip() {
     setMessage('')
     try {
-      await adminOrderService.shipOrder(Number(orderId))
+      await adminOrderService.shipOrder(Number(orderId), {
+        logistics_company: logisticsCompany,
+        tracking_no: trackingNo,
+      })
       setMessage('订单已发货')
     } catch {
       setMessage('发货失败，请检查订单状态')
@@ -87,6 +92,12 @@ export function OrderAdminPage() {
       <section>
         <h2>快速发货</h2>
         <input value={orderId} onChange={(event) => setOrderId(event.target.value)} placeholder="订单 ID" />
+        <input
+          value={logisticsCompany}
+          onChange={(event) => setLogisticsCompany(event.target.value)}
+          placeholder="物流公司"
+        />
+        <input value={trackingNo} onChange={(event) => setTrackingNo(event.target.value)} placeholder="物流单号" />
         <button type="button" onClick={handleShip}>
           发货
         </button>
@@ -111,7 +122,8 @@ export function OrderAdminPage() {
           <ul>
             {refunds.map((refund) => (
               <li key={refund.id}>
-                #{refund.id} 订单 {refund.order_id} - {refund.status} - {refund.reason}
+                #{refund.id} 订单 {refund.order_id} - {refund.status} - {refund.reason_type} - ￥
+                {(refund.refund_amount_cent / 100).toFixed(2)} - {refund.reason}
                 <button type="button" onClick={() => handleApprove(refund.id)}>
                   同意
                 </button>

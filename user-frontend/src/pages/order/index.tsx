@@ -73,6 +73,7 @@ export function OrderPage() {
               <button type="button" onClick={() => handleRefund(order.id)}>
                 申请售后
               </button>
+              {order.logistics_company && <span> {order.logistics_company} {order.tracking_no}</span>}
             </li>
           ))}
         </ul>

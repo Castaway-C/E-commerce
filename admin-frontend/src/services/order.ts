@@ -20,14 +20,16 @@ export type Refund = {
   id: number
   order_id: number
   user_id: number
+  refund_amount_cent: number
+  reason_type: string
   reason: string
   status: string
   origin_order_status: string
 }
 
 export const adminOrderService = {
-  shipOrder(orderId: number) {
-    return http.post(`/admin/orders/${orderId}/ship`)
+  shipOrder(orderId: number, payload: { logistics_company: string; tracking_no: string }) {
+    return http.post(`/admin/orders/${orderId}/ship`, payload)
   },
 
   auditReview(reviewId: number, approved: boolean) {
