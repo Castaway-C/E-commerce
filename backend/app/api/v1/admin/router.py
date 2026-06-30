@@ -479,7 +479,7 @@ async def audit_product(
         action="product.audit",
         resource_type="product",
         resource_id=product_id,
-        description=f"商品审核：{'通过' if payload.approved else '拒绝'}",
+        description=f"商品监管兼容接口：{'上架' if payload.approved else '下架'}",
     )
     await db.commit()
     return success(product_service.to_detail_response(product))
@@ -607,7 +607,7 @@ async def admin_batch_grant_coupon(
 async def admin_list_community_posts(
     db: DbSession,
     _: AdminUser = Depends(get_current_admin),
-    status: str = "pending_audit",
+    status: str = "published",
     page: int = 1,
     page_size: int = 20,
 ) -> ApiResponse[dict]:
@@ -639,7 +639,7 @@ async def admin_list_community_comments(
     db: DbSession,
     _: AdminUser = Depends(get_current_admin),
     post_id: int | None = None,
-    status: str = "pending_audit",
+    status: str = "published",
     page: int = 1,
     page_size: int = 20,
 ) -> ApiResponse[dict]:

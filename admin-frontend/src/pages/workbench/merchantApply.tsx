@@ -1,17 +1,9 @@
+import { Button, Card, Col, Descriptions, Form, Input, Row, Space, Tag, Typography, message } from 'antd'
 import { useState } from 'react'
 import { http } from '../../services/http'
-import {
-  Empty,
-  Field,
-  Panel,
-  ResultBoard,
-  TextArea,
-  formatError,
-  pickData,
-  randomText,
-  statusText,
-  type ApiResult,
-} from './shared'
+import { DebugLogs, StatusTag, formatError, pickData, type ApiLog } from './adminShared'
+
+const { Title, Paragraph, Text } = Typography
 
 type MerchantApplication = {
   id: number
@@ -23,107 +15,135 @@ type MerchantApplication = {
 }
 
 export function MerchantApplyPage() {
-  const [lastResult, setLastResult] = useState<ApiResult>(null)
+  const [api, contextHolder] = message.useMessage()
+  const [logs, setLogs] = useState<ApiLog[]>([])
   const [application, setApplication] = useState<MerchantApplication | null>(null)
-  const [username, setUsername] = useState(`merchant_${Math.random().toString(16).slice(2, 8)}`)
-  const [password, setPassword] = useState('12345678')
-  const [realName, setRealName] = useState('商家负责人')
-  const [merchantName, setMerchantName] = useState(randomText('申请店铺'))
-  const [announcement, setAnnouncement] = useState('申请入驻一次买够平台')
+  const [loginForm] = Form.useForm()
+  const [applyForm] = Form.useForm()
 
-  async function run(title: string, action: () => Promise<unknown>) {
+  async function run<T>(title: string, action: () => Promise<unknown>): Promise<T | null> {
     try {
       const response = await action()
       const data = pickData(response)
-      setLastResult({ title, ok: true, data })
-      return data
+      setLogs((items) => [{ title, ok: true, data, time: new Date().toLocaleTimeString() }, ...items].slice(0, 8))
+      return data as T
     } catch (error) {
       const data = formatError(error)
-      setLastResult({ title, ok: false, data })
+      setLogs((items) => [{ title, ok: false, data, time: new Date().toLocaleTimeString() }, ...items].slice(0, 8))
+      api.error(`${title}失败`)
       return null
     }
   }
 
-  async function register() {
-    const data = await run('提交商家入驻申请', () =>
-      http.post('/admin/merchant/register', {
-        username,
-        password,
-        real_name: realName,
-        merchant_name: merchantName,
-        announcement,
-      }),
-    )
-    if (data) setApplication(data as MerchantApplication)
+  async function register(values: {
+    username: string
+    password: string
+    real_name: string
+    merchant_name: string
+    announcement?: string
+  }) {
+    const data = await run<MerchantApplication>('提交商家入驻申请', () => http.post('/admin/merchant/register', values))
+    if (data) {
+      setApplication(data)
+      loginForm.setFieldsValue({ username: values.username, password: values.password })
+    }
   }
 
-  async function login() {
+  async function login(values: { username: string; password: string }) {
     await run('商家账号登录', async () => {
-      const response = await http.post('/admin/auth/login', { username, password })
+      const response = await http.post('/admin/auth/login', values, { headers: { 'X-Admin-Session': 'merchant' } })
       const data = pickData(response) as { access_token?: string; refresh_token?: string }
-      if (data.access_token) localStorage.setItem('admin_access_token', data.access_token)
-      if (data.refresh_token) localStorage.setItem('admin_refresh_token', data.refresh_token)
+      if (data.access_token) localStorage.setItem('merchant_admin_access_token', data.access_token)
+      if (data.refresh_token) localStorage.setItem('merchant_admin_refresh_token', data.refresh_token)
       return response
     })
     await loadApplication()
   }
 
   async function loadApplication() {
-    const data = await run('查看我的入驻申请', () => http.get('/admin/merchant/application/me'))
-    setApplication((data as MerchantApplication | null) ?? null)
+    const data = await run<MerchantApplication | null>('查看我的入驻申请', () =>
+      http.get('/admin/merchant/application/me', { headers: { 'X-Admin-Session': 'merchant' } }),
+    )
+    setApplication(data ?? null)
   }
 
-  async function resubmit() {
-    const data = await run('重新提交入驻资料', () =>
-      http.put('/admin/merchant/application/me', {
-        merchant_name: merchantName,
-        announcement,
-      }),
+  async function resubmit(values: { merchant_name: string; announcement?: string }) {
+    const data = await run<MerchantApplication>('重新提交入驻资料', () =>
+      http.put('/admin/merchant/application/me', values, { headers: { 'X-Admin-Session': 'merchant' } }),
     )
-    if (data) setApplication(data as MerchantApplication)
+    if (data) setApplication(data)
   }
 
   return (
     <main className="admin-page">
-      <header className="page-header">
+      {contextHolder}
+      <section className="admin-hero">
         <div>
-          <h1>商家入驻</h1>
-          <p>商家自行注册后台账号。审核前只能登录、查看申请和重新提交资料；平台通过后再进入商家运营后台。</p>
+          <Text className="eyebrow">商家入驻</Text>
+          <Title level={1}>自助注册，平台审核后获得商家权限</Title>
+          <Paragraph>商家可注册并登录查看入驻状态；平台通过后，商家端自动获得店铺 ID 和商品上传权限。</Paragraph>
         </div>
-        <section className="status-card">
-          <h2>申请状态</h2>
-          {application ? (
-            <div className="info-list">
-              <span>店铺：{application.merchant_name}</span>
-              <span>状态：{statusText(application.status)}</span>
-              <span>店铺 ID：{application.merchant_id ?? '审核通过后生成'}</span>
-              <span>拒绝原因：{application.reject_reason || '-'}</span>
-            </div>
-          ) : (
-            <Empty>暂无申请信息。提交申请或登录后刷新查看。</Empty>
-          )}
-        </section>
-      </header>
+      </section>
 
-      <div className="workbench-grid narrow">
-        <Panel title="入驻资料" description="被拒绝后可不限次数重新提交；通过后不可再通过本页修改申请。">
-          <div className="form-grid">
-            <Field label="登录用户名" value={username} onChange={setUsername} />
-            <Field label="密码" value={password} onChange={setPassword} type="password" />
-            <Field label="负责人姓名" value={realName} onChange={setRealName} />
-            <Field label="店铺名称" value={merchantName} onChange={setMerchantName} />
-            <TextArea label="店铺公告" value={announcement} onChange={setAnnouncement} />
-          </div>
-          <div className="toolbar">
-            <button onClick={register}>提交入驻申请</button>
-            <button onClick={login}>用商家账号登录</button>
-            <button onClick={loadApplication}>查看我的申请</button>
-            <button onClick={resubmit}>重新提交资料</button>
-          </div>
-        </Panel>
-      </div>
+      <Row gutter={[24, 24]}>
+        <Col span={8}>
+          <Card title="当前申请状态">
+            {application ? (
+              <Descriptions column={1} size="small">
+                <Descriptions.Item label="申请 ID">#{application.id}</Descriptions.Item>
+                <Descriptions.Item label="店铺">{application.merchant_name}</Descriptions.Item>
+                <Descriptions.Item label="状态"><StatusTag status={application.status} /></Descriptions.Item>
+                <Descriptions.Item label="店铺 ID">{application.merchant_id ? <Tag color="purple">#{application.merchant_id}</Tag> : '审核通过后生成'}</Descriptions.Item>
+                <Descriptions.Item label="拒绝原因">{application.reject_reason || '-'}</Descriptions.Item>
+              </Descriptions>
+            ) : (
+              <Text type="secondary">暂无申请信息，提交或登录后可查看。</Text>
+            )}
+          </Card>
+        </Col>
+        <Col span={8}>
+          <Card title="注册商家账号">
+            <Form
+              layout="vertical"
+              form={applyForm}
+              onFinish={register}
+              initialValues={{
+                username: `merchant_${Math.random().toString(16).slice(2, 8)}`,
+                password: '12345678',
+                real_name: '商家负责人',
+                merchant_name: `申请店铺_${Math.random().toString(16).slice(2, 6)}`,
+                announcement: '申请入驻一次买够平台',
+              }}
+            >
+              <Form.Item label="登录用户名" name="username" rules={[{ required: true }]}><Input /></Form.Item>
+              <Form.Item label="密码" name="password" rules={[{ required: true, min: 8 }]}><Input.Password /></Form.Item>
+              <Form.Item label="负责人姓名" name="real_name" rules={[{ required: true }]}><Input /></Form.Item>
+              <Form.Item label="店铺名称" name="merchant_name" rules={[{ required: true }]}><Input /></Form.Item>
+              <Form.Item label="店铺公告" name="announcement"><Input.TextArea rows={3} /></Form.Item>
+              <Button type="primary" htmlType="submit">提交入驻申请</Button>
+            </Form>
+          </Card>
+        </Col>
+        <Col span={8}>
+          <Card title="商家登录 / 重新提交">
+            <Form layout="vertical" form={loginForm} onFinish={login} initialValues={{ password: '12345678' }}>
+              <Form.Item label="商家账号" name="username" rules={[{ required: true }]}><Input /></Form.Item>
+              <Form.Item label="密码" name="password" rules={[{ required: true, min: 8 }]}><Input.Password /></Form.Item>
+              <Space>
+                <Button type="primary" htmlType="submit">登录并查看申请</Button>
+                <Button onClick={loadApplication}>刷新状态</Button>
+              </Space>
+            </Form>
+            <Form layout="vertical" onFinish={resubmit} className="resubmit-form">
+              <Form.Item label="店铺名称" name="merchant_name" rules={[{ required: true }]}><Input /></Form.Item>
+              <Form.Item label="店铺公告" name="announcement"><Input.TextArea rows={3} /></Form.Item>
+              <Button htmlType="submit">重新提交资料</Button>
+            </Form>
+          </Card>
+        </Col>
+      </Row>
 
-      <ResultBoard result={lastResult} />
+      <DebugLogs logs={logs} />
     </main>
   )
 }

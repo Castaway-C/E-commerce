@@ -1,15 +1,46 @@
+import {
+  Badge,
+  Button,
+  Card,
+  Col,
+  Collapse,
+  Descriptions,
+  Divider,
+  Drawer,
+  Empty,
+  Form,
+  Image,
+  Input,
+  InputNumber,
+  List,
+  Modal,
+  Row,
+  Select,
+  Skeleton,
+  Space,
+  Statistic,
+  Tag,
+  Typography,
+  Upload,
+  message,
+} from 'antd'
+import type { UploadFile } from 'antd'
 import { useEffect, useMemo, useState } from 'react'
 import { addressService, type Address } from '../../services/address'
 import { authService, type UserProfile } from '../../services/auth'
-import { communityService, type CommunityPost } from '../../services/community'
+import { communityService, type CommunityComment, type CommunityPost } from '../../services/community'
 import { orderService, type CartItem, type CheckoutResult, type Order } from '../../services/order'
-import { productService, type ProductDetail, type ProductListItem } from '../../services/product'
+import { productService, type Category, type ProductDetail, type ProductListItem } from '../../services/product'
 import { promotionService, type CouponTemplate, type UserCoupon } from '../../services/promotion'
+import { uploadService } from '../../services/upload'
+
+const { Title, Text, Paragraph } = Typography
 
 type ApiResult = {
   title: string
   ok: boolean
   data: unknown
+  time: string
 }
 
 function yuan(valueCent?: number | null) {
@@ -44,7 +75,7 @@ function formatError(error: unknown) {
   return error instanceof Error ? error.message : error
 }
 
-function newMobile() {
+function randomMobile() {
   return `137${String(Date.now()).slice(-8)}`
 }
 
@@ -52,52 +83,93 @@ function randomToken(prefix: string) {
   return `${prefix}_${Date.now()}_${Math.random().toString(16).slice(2, 8)}`
 }
 
+function absoluteAssetUrl(url?: string | null) {
+  if (!url) return undefined
+  if (/^https?:\/\//.test(url)) return url
+  return `http://localhost:8000${url}`
+}
+
 function statusText(status?: string) {
   const map: Record<string, string> = {
     pending_payment: '待支付',
-    paid: '待发货',
-    shipped: '待收货',
+    pending_shipment: '待发货',
+    shipping: '待收货',
+    pending_receipt: '待收货',
     completed: '已完成',
     cancelled: '已取消',
-    pending_audit: '待审核',
-    approved: '已通过',
-    rejected: '已拒绝',
+    after_sale: '售后中',
+    closed: '已关闭',
+    published: '已发布',
     hidden: '已隐藏',
-    active: '可用',
+    on_sale: '上架中',
+    off_sale: '已下架',
+    active: '可领取',
+    unused: '未使用',
     used: '已使用',
     expired: '已过期',
+    disabled: '已停用',
+    normal: '普通帖',
+    grass: '种草帖',
   }
   return status ? map[status] ?? status : '-'
 }
 
-function DataPanel({ result }: { result: ApiResult | null }) {
+function statusColor(status?: string) {
+  if (['completed', 'published', 'on_sale', 'active', 'unused'].includes(status || '')) return 'green'
+  if (['pending_payment', 'pending_shipment', 'shipping', 'pending_receipt', 'after_sale'].includes(status || '')) {
+    return 'orange'
+  }
+  if (['cancelled', 'closed', 'hidden', 'disabled', 'expired'].includes(status || '')) return 'red'
+  return 'blue'
+}
+
+function ApiHistory({ results }: { results: ApiResult[] }) {
   return (
-    <details className="debug-panel">
-      <summary>接口返回排查</summary>
-      {result ? (
-        <pre>{JSON.stringify(result, null, 2)}</pre>
-      ) : (
-        <p className="muted">正常使用时不用看这里。接口报错或数据异常时，可展开查看最近一次请求结果。</p>
-      )}
-    </details>
+    <Collapse
+      className="debug-collapse"
+      items={[
+        {
+          key: 'debug',
+          label: `接口返回排查（最近 ${results.length} 条）`,
+          children:
+            results.length === 0 ? (
+              <Text type="secondary">正常使用时不用查看这里。接口报错时展开最近操作记录即可排查。</Text>
+            ) : (
+              <Space direction="vertical" size={12} style={{ width: '100%' }}>
+                {results.map((result, index) => (
+                  <Card size="small" key={`${result.time}-${index}`} title={`${result.time} ${result.title}`}>
+                    <Tag color={result.ok ? 'green' : 'red'}>{result.ok ? '成功' : '失败'}</Tag>
+                    <pre>{JSON.stringify(result.data, null, 2)}</pre>
+                  </Card>
+                ))}
+              </Space>
+            ),
+        },
+      ]}
+    />
   )
 }
 
 export function UserTestConsolePage() {
-  const [lastResult, setLastResult] = useState<ApiResult | null>(null)
-  const [mobile, setMobile] = useState(newMobile())
+  const [api, contextHolder] = message.useMessage()
+  const [apiHistory, setApiHistory] = useState<ApiResult[]>([])
+  const [loading, setLoading] = useState(false)
+
+  const [mobile, setMobile] = useState(randomMobile())
   const [password, setPassword] = useState('12345678')
   const [nickname, setNickname] = useState('测试用户')
   const [profile, setProfile] = useState<UserProfile | null>(null)
 
+  const [categories, setCategories] = useState<Category[]>([])
+  const [categoryId, setCategoryId] = useState<number | undefined>()
   const [keyword, setKeyword] = useState('')
   const [products, setProducts] = useState<ProductListItem[]>([])
   const [selectedProduct, setSelectedProduct] = useState<ProductDetail | null>(null)
-  const [selectedSkuId, setSelectedSkuId] = useState('')
-  const [quantity, setQuantity] = useState('1')
+  const [selectedSkuId, setSelectedSkuId] = useState<number | undefined>()
+  const [quantity, setQuantity] = useState(1)
 
   const [addresses, setAddresses] = useState<Address[]>([])
-  const [selectedAddressId, setSelectedAddressId] = useState('')
+  const [selectedAddressId, setSelectedAddressId] = useState<number | undefined>()
   const [receiverName, setReceiverName] = useState('测试收货人')
   const [receiverMobile, setReceiverMobile] = useState(mobile)
   const [detailAddress, setDetailAddress] = useState('测试路 1 号')
@@ -105,49 +177,65 @@ export function UserTestConsolePage() {
   const [cart, setCart] = useState<CartItem[]>([])
   const [checkoutPreview, setCheckoutPreview] = useState<CheckoutResult | null>(null)
   const [orders, setOrders] = useState<Order[]>([])
-  const [selectedOrderId, setSelectedOrderId] = useState('')
-  const [paymentId, setPaymentId] = useState('')
+  const [selectedOrderId, setSelectedOrderId] = useState<number | undefined>()
+  const [paymentId, setPaymentId] = useState<number | undefined>()
 
   const [coupons, setCoupons] = useState<CouponTemplate[]>([])
   const [myCoupons, setMyCoupons] = useState<UserCoupon[]>([])
-  const [selectedUserCouponId, setSelectedUserCouponId] = useState('')
+  const [selectedUserCouponId, setSelectedUserCouponId] = useState<number | undefined>()
 
   const [posts, setPosts] = useState<CommunityPost[]>([])
-  const [selectedPostId, setSelectedPostId] = useState('')
+  const [selectedPost, setSelectedPost] = useState<CommunityPost | null>(null)
+  const [comments, setComments] = useState<CommunityComment[]>([])
   const [postTitle, setPostTitle] = useState('我的购物体验')
-  const [postContent, setPostContent] = useState('这是一条用于测试社区流程的内容。')
+  const [postContent, setPostContent] = useState('这是一条用于社区展示的内容。')
   const [postProductIds, setPostProductIds] = useState('')
-  const [commentContent, setCommentContent] = useState('这是一条测试评论。')
+  const [postImages, setPostImages] = useState<string[]>([])
+  const [commentContent, setCommentContent] = useState('这是一条评论。')
 
   const selectedSku = useMemo(() => {
-    return selectedProduct?.skus.find((sku) => String(sku.id) === selectedSkuId) ?? selectedProduct?.skus[0]
+    return selectedProduct?.skus.find((sku) => sku.id === selectedSkuId) ?? selectedProduct?.skus[0]
   }, [selectedProduct, selectedSkuId])
 
   const selectedOrder = useMemo(() => {
-    return orders.find((order) => String(order.id) === selectedOrderId) ?? null
+    return orders.find((order) => order.id === selectedOrderId) ?? null
   }, [orders, selectedOrderId])
 
-  async function run(title: string, action: () => Promise<unknown>) {
+  const availableUserCoupons = useMemo(() => {
+    return myCoupons.filter((coupon) => coupon.status === 'unused')
+  }, [myCoupons])
+
+  const cartTotal = cart.reduce((total, item) => total + item.price_cent * item.quantity, 0)
+
+  async function run<T>(title: string, action: () => Promise<unknown>): Promise<T | null> {
     try {
       const response = await action()
       const data = pickData(response)
-      setLastResult({ title, ok: true, data })
-      return data
+      setApiHistory((items) => [{ title, ok: true, data, time: new Date().toLocaleTimeString() }, ...items].slice(0, 8))
+      return data as T
     } catch (error) {
       const data = formatError(error)
-      setLastResult({ title, ok: false, data })
+      setApiHistory((items) => [{ title, ok: false, data, time: new Date().toLocaleTimeString() }, ...items].slice(0, 8))
+      api.error(`${title}失败，请展开接口返回排查`)
       return null
     }
   }
 
   async function loadProfile() {
-    const data = await run('读取当前用户', () => authService.profile())
-    if (data) setProfile(data as UserProfile)
+    if (!authService.hasToken()) {
+      setProfile(null)
+      return
+    }
+    const data = await run<UserProfile>('读取当前用户', () => authService.profile())
+    if (data) setProfile(data)
   }
 
   async function login() {
-    await run('用户登录', () => authService.login({ account: mobile, password }))
-    await loadProfile()
+    const data = await run('用户登录', () => authService.login({ account: mobile, password }))
+    if (data) {
+      await loadProfile()
+      api.success('用户已登录')
+    }
   }
 
   async function register() {
@@ -155,35 +243,42 @@ export function UserTestConsolePage() {
     await login()
   }
 
-  async function loadProducts() {
-    const response = await run('商品列表', () => productService.listProducts())
-    const page = response as { list?: ProductListItem[] } | null
-    const nextProducts = page?.list ?? []
-    const filtered = keyword
-      ? nextProducts.filter((product) => product.name.includes(keyword) || product.merchant_name.includes(keyword))
-      : nextProducts
-    setProducts(filtered)
+  async function loadCategories() {
+    const data = await run<Category[]>('分类列表', () => productService.listCategories())
+    setCategories(data ?? [])
+  }
+
+  async function loadProducts(nextCategoryId = categoryId) {
+    setLoading(true)
+    const data = await run<{ list?: ProductListItem[] }>('商品列表', () =>
+      productService.listProducts({
+        keyword: keyword || undefined,
+        category_id: nextCategoryId,
+      }),
+    )
+    setProducts(data?.list ?? [])
+    setLoading(false)
   }
 
   async function openProduct(productId: number) {
-    const data = await run('商品详情', () => productService.getProduct(productId))
+    const data = await run<ProductDetail>('商品详情', () => productService.getProduct(productId))
     if (data) {
-      const detail = data as ProductDetail
-      setSelectedProduct(detail)
-      setPostProductIds(String(detail.id))
-      if (detail.skus[0]) setSelectedSkuId(String(detail.skus[0].id))
+      setSelectedProduct(data)
+      setSelectedSkuId(data.skus[0]?.id)
+      setPostProductIds(String(data.id))
     }
   }
 
   async function loadAddresses() {
-    const data = await run('地址列表', () => addressService.listAddresses())
-    const list = (data as Address[] | null) ?? []
+    if (!authService.hasToken()) return
+    const data = await run<Address[]>('地址列表', () => addressService.listAddresses())
+    const list = data ?? []
     setAddresses(list)
-    if (!selectedAddressId && list[0]) setSelectedAddressId(String(list[0].id))
+    if (!selectedAddressId && list[0]) setSelectedAddressId(list[0].id)
   }
 
   async function createAddress() {
-    const data = await run('新增地址', () =>
+    const data = await run<Address>('新增地址', () =>
       addressService.createAddress({
         receiver_name: receiverName,
         receiver_mobile: receiverMobile,
@@ -195,34 +290,52 @@ export function UserTestConsolePage() {
       }),
     )
     if (data) {
-      setSelectedAddressId(String((data as Address).id))
+      setSelectedAddressId(data.id)
       await loadAddresses()
     }
   }
 
   async function loadCart() {
-    const data = await run('购物车', () => orderService.listCart())
-    setCart((data as CartItem[] | null) ?? [])
+    if (!authService.hasToken()) return
+    const data = await run<CartItem[]>('购物车', () => orderService.listCart())
+    setCart(data ?? [])
   }
 
   async function addCart() {
     if (!selectedSku) return
-    await run('加入购物车', () =>
-      orderService.addCartItem({ sku_id: selectedSku.id, quantity: Math.max(1, Number(quantity) || 1) }),
+    const data = await run<CartItem[]>('加入购物车', () =>
+      orderService.addCartItem({ sku_id: selectedSku.id, quantity }),
     )
-    await loadCart()
+    if (data) setCart(data)
+  }
+
+  async function changeCartQuantity(item: CartItem, nextQuantity: number) {
+    const data = await run<CartItem[]>('修改购物车数量', () =>
+      orderService.updateCartItem(item.sku_id, { quantity: nextQuantity, checked: item.checked }),
+    )
+    if (data) setCart(data)
+  }
+
+  async function removeCartItem(item: CartItem) {
+    const data = await run<CartItem[]>('移出购物车', () => orderService.deleteCartItem(item.sku_id))
+    if (data) setCart(data)
   }
 
   async function loadCoupons() {
-    const data = await run('可领取优惠券', () => promotionService.listCoupons())
-    setCoupons((data as CouponTemplate[] | null) ?? [])
+    const data = await run<CouponTemplate[]>('可领优惠券', () => promotionService.listCoupons())
+    setCoupons(data ?? [])
   }
 
   async function loadMyCoupons() {
-    const data = await run('我的优惠券', () => promotionService.listMyCoupons())
-    const list = (data as UserCoupon[] | null) ?? []
+    if (!authService.hasToken()) return
+    const data = await run<UserCoupon[]>('我的优惠券', () => promotionService.listMyCoupons())
+    const list = data ?? []
     setMyCoupons(list)
-    if (!selectedUserCouponId && list[0]) setSelectedUserCouponId(String(list[0].id))
+    const usable = list.find((coupon) => coupon.status === 'unused')
+    if (!selectedUserCouponId && usable) setSelectedUserCouponId(usable.id)
+    if (selectedUserCouponId && !list.some((coupon) => coupon.id === selectedUserCouponId && coupon.status === 'unused')) {
+      setSelectedUserCouponId(undefined)
+    }
   }
 
   async function claimCoupon(couponId: number) {
@@ -231,37 +344,54 @@ export function UserTestConsolePage() {
   }
 
   async function checkout() {
-    const data = await run('结算预览', () => orderService.checkout())
-    if (data) setCheckoutPreview(data as CheckoutResult)
+    const data = await run<CheckoutResult>('结算预览', () =>
+      orderService.checkout({ coupon_id: selectedUserCouponId ?? null }),
+    )
+    if (data) setCheckoutPreview(data)
   }
 
   async function createOrder() {
-    const data = await run('提交订单', () =>
+    if (!profile) {
+      api.warning('请先登录用户账号')
+      return
+    }
+    if (!selectedAddressId) {
+      api.warning('请先新增或选择收货地址')
+      return
+    }
+    if (cart.filter((item) => item.checked).length === 0) {
+      api.warning('购物车没有已选商品，请先加入购物车')
+      return
+    }
+    const data = await run<{ payment_id?: number; order_ids?: number[] }>('提交订单', () =>
       orderService.createOrder({
         client_order_token: randomToken('order'),
-        shipping_address_id: selectedAddressId ? Number(selectedAddressId) : null,
-        coupon_id: selectedUserCouponId ? Number(selectedUserCouponId) : null,
-        source_post_id: selectedPostId ? Number(selectedPostId) : null,
+        shipping_address_id: selectedAddressId ?? null,
+        coupon_id: selectedUserCouponId ?? null,
+        source_post_id: selectedPost?.type === 'grass' ? selectedPost.id : null,
       }),
     )
-    const result = data as { payment_id?: number; order_ids?: number[] } | null
-    if (result?.payment_id) setPaymentId(String(result.payment_id))
-    if (result?.order_ids?.[0]) setSelectedOrderId(String(result.order_ids[0]))
+    if (data?.payment_id) setPaymentId(data.payment_id)
+    if (data?.order_ids?.[0]) setSelectedOrderId(data.order_ids[0])
     await loadOrders()
     await loadCart()
   }
 
   async function payOrder() {
     if (!paymentId) return
-    await run('模拟支付', () => orderService.pay(Number(paymentId)))
+    await run('模拟支付', () => orderService.pay(paymentId))
     await loadOrders()
   }
 
   async function loadOrders() {
-    const data = await run('我的订单', () => orderService.listOrders())
-    const list = ((data as { list?: Order[] } | null)?.list ?? []) as Order[]
+    if (!authService.hasToken()) return
+    const data = await run<{ list?: Order[] }>('我的订单', () => orderService.listOrders())
+    const list = data?.list ?? []
     setOrders(list)
-    if (!selectedOrderId && list[0]) setSelectedOrderId(String(list[0].id))
+    if (!selectedOrderId && list[0]) {
+      setSelectedOrderId(list[0].id)
+      setPaymentId(list[0].payment_id)
+    }
   }
 
   async function confirmOrder(orderId: number) {
@@ -292,10 +422,14 @@ export function UserTestConsolePage() {
   }
 
   async function loadPosts() {
-    const data = await run('社区帖子', () => communityService.listPosts())
-    const list = ((data as { list?: CommunityPost[] } | null)?.list ?? []) as CommunityPost[]
-    setPosts(list)
-    if (!selectedPostId && list[0]) setSelectedPostId(String(list[0].id))
+    const data = await run<{ list?: CommunityPost[] }>('社区帖子', () => communityService.listPosts())
+    setPosts(data?.list ?? [])
+  }
+
+  async function openPost(post: CommunityPost) {
+    setSelectedPost(post)
+    const data = await run<{ list?: CommunityComment[] }>('帖子评论', () => communityService.listComments(post.id))
+    setComments(data?.list ?? [])
   }
 
   async function createPost(type: 'normal' | 'grass') {
@@ -305,8 +439,8 @@ export function UserTestConsolePage() {
         title: postTitle,
         content: postContent,
         product_ids: splitIds(postProductIds),
-        topic_tags: ['测试'],
-        image_urls: [],
+        topic_tags: ['体验'],
+        image_urls: postImages,
       }),
     )
     await loadPosts()
@@ -314,383 +448,450 @@ export function UserTestConsolePage() {
 
   async function commentPost(postId: number) {
     await run('发表评论', () => communityService.createComment(postId, commentContent))
-    await loadPosts()
+    await openPost(selectedPost as CommunityPost)
+  }
+
+  async function uploadPostImage(file: File) {
+    const data = await run<{ url: string }>('上传帖子图片', () => uploadService.uploadImage(file))
+    if (data?.url) setPostImages((items) => [...items, data.url])
+    return false
   }
 
   useEffect(() => {
+    void loadCategories()
     void loadProducts()
     void loadCoupons()
     void loadPosts()
+    void loadProfile()
+    void loadCart()
+    void loadOrders()
+    void loadAddresses()
+    void loadMyCoupons()
   }, [])
+
+  const uploadFiles: UploadFile[] = postImages.map((url, index) => ({
+    uid: `${index}`,
+    name: url.split('/').pop() || `image-${index}`,
+    status: 'done',
+    url: absoluteAssetUrl(url),
+  }))
 
   return (
     <main className="shop-page">
-      <header className="page-header">
-        <div className="hero-copy">
-          <p className="eyebrow">一次买够 It's Mygo</p>
-          <h1>一次买够用户端</h1>
-          <p>用于按真实购物习惯联调：浏览商品、加购、下单、支付、收货、评价售后和社区互动。</p>
-          <div className="hero-stats">
-            <div>
-              <strong>{products.length}</strong>
-              <span>可浏览商品</span>
-            </div>
-            <div>
-              <strong>{cart.reduce((total, item) => total + item.quantity, 0)}</strong>
-              <span>购物车件数</span>
-            </div>
-            <div>
-              <strong>{orders.length}</strong>
-              <span>我的订单</span>
-            </div>
-          </div>
+      {contextHolder}
+      <section className="shop-hero">
+        <div>
+          <Text className="eyebrow">社交新零售电商平台</Text>
+          <Title level={1}>一次买够 It's Mygo</Title>
+          <Paragraph>浏览商品、领取优惠券、加入购物车、模拟支付、确认收货，并在社区分享种草内容。</Paragraph>
+          <Space size={16} wrap>
+            <Statistic title="商品" value={products.length} />
+            <Statistic title="购物车件数" value={cart.reduce((total, item) => total + item.quantity, 0)} />
+            <Statistic title="订单" value={orders.length} />
+          </Space>
         </div>
-        <section className="account-card">
-          <h2>当前用户</h2>
+        <Card className="login-card" title={profile ? '当前用户' : '用户登录 / 注册'}>
           {profile ? (
-            <div className="info-list">
-              <span>用户：{profile.nickname}</span>
-              <span>手机：{profile.mobile}</span>
-              <span>积分：{profile.points}</span>
-            </div>
-          ) : (
-            <p className="muted">未登录，先注册或登录后再测试购物流程。</p>
-          )}
-          <div className="compact-form">
-            <input value={mobile} onChange={(event) => setMobile(event.target.value)} placeholder="手机号" />
-            <input
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              placeholder="密码"
-              type="password"
-            />
-            <input value={nickname} onChange={(event) => setNickname(event.target.value)} placeholder="昵称" />
-          </div>
-          <div className="button-row">
-            <button onClick={login}>登录</button>
-            <button onClick={register}>注册并登录</button>
-            <button onClick={loadProfile}>刷新用户</button>
-          </div>
-        </section>
-      </header>
+            <Descriptions size="small" column={1}>
+              <Descriptions.Item label="昵称">{profile.nickname}</Descriptions.Item>
+              <Descriptions.Item label="手机">{profile.mobile}</Descriptions.Item>
+              <Descriptions.Item label="积分">{profile.points}</Descriptions.Item>
+            </Descriptions>
+          ) : null}
+          <Space direction="vertical" style={{ width: '100%' }}>
+            <Input value={mobile} onChange={(event) => setMobile(event.target.value)} placeholder="手机号" />
+            <Input.Password value={password} onChange={(event) => setPassword(event.target.value)} placeholder="密码" />
+            <Input value={nickname} onChange={(event) => setNickname(event.target.value)} placeholder="昵称" />
+            <Space wrap>
+              <Button type="primary" onClick={login}>登录</Button>
+              <Button onClick={register}>注册并登录</Button>
+              <Button onClick={loadProfile}>刷新用户</Button>
+            </Space>
+          </Space>
+        </Card>
+      </section>
 
-      <div className="shop-layout">
-        <section className="content-column">
-          <section className="panel">
-            <div className="section-title">
-              <div>
-                <h2>商品浏览</h2>
-                <p>商品信息直接显示在列表中，选择商品后可查看 SKU 并加入购物车。</p>
-              </div>
-              <div className="inline-tools">
-                <input value={keyword} onChange={(event) => setKeyword(event.target.value)} placeholder="按商品/店铺筛选" />
-                <button onClick={loadProducts}>刷新商品</button>
-              </div>
-            </div>
-            <div className="product-grid">
-              {products.map((product) => (
-                <article className="product-card" key={product.id}>
-                  <div className="placeholder-image">商品图</div>
-                  <div className="product-meta">
-                    <span>商品 #{product.id}</span>
-                    <span>店铺 #{product.merchant_id}</span>
-                  </div>
-                  <h3>{product.name}</h3>
-                  <p>{product.merchant_name}</p>
-                  <strong>￥{yuan(product.price_cent)}</strong>
-                  <span className="muted">销量 {product.sales_count}</span>
-                  <button onClick={() => openProduct(product.id)}>查看并选择</button>
-                </article>
-              ))}
-              {products.length === 0 ? <p className="muted">暂无商品。请先在商家运营或平台运营创建并上架商品。</p> : null}
-            </div>
-
-            {selectedProduct ? (
-              <div className="detail-panel">
-                <div>
-                  <h3>{selectedProduct.name}</h3>
-                  <p>{selectedProduct.description || '暂无描述'}</p>
-                </div>
-                <div className="table-wrap">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>选择</th>
-                        <th>规格</th>
-                        <th>价格</th>
-                        <th>库存</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {selectedProduct.skus.map((sku) => (
-                  <tr key={sku.id}>
-                          <td>
-                            <input
-                              checked={selectedSkuId === String(sku.id)}
-                              name="sku"
-                              onChange={() => setSelectedSkuId(String(sku.id))}
-                              type="radio"
-                            />
-                          </td>
-                          <td>{sku.name} <span className="id-pill">SKU #{sku.id}</span></td>
-                          <td>￥{yuan(sku.price_cent)}</td>
-                          <td>{sku.stock}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <div className="inline-tools">
-                  <input value={quantity} onChange={(event) => setQuantity(event.target.value)} placeholder="数量" />
-                  <button onClick={addCart}>加入购物车</button>
-                </div>
-              </div>
-            ) : null}
-          </section>
-
-          <section className="panel">
-            <div className="section-title">
-              <div>
-                <h2>购物车与结算</h2>
-                <p>先确认购物车和地址，再提交订单。优惠券按“我的优惠券”选择。</p>
-              </div>
-              <div className="button-row">
-                <button onClick={loadCart}>刷新购物车</button>
-                <button onClick={checkout}>结算预览</button>
-              </div>
-            </div>
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>商品</th>
-                    <th>规格</th>
-                    <th>单价</th>
-                    <th>数量</th>
-                    <th>状态</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {cart.map((item) => (
-                    <tr key={item.sku_id}>
-                      <td>{item.product_name}</td>
-                      <td>{item.sku_name}</td>
-                      <td>￥{yuan(item.price_cent)}</td>
-                      <td>{item.quantity}</td>
-                      <td>{item.invalid_reason || (item.checked ? '已选中' : '未选中')}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            {checkoutPreview ? (
-              <div className="summary-line">
-                <span>商品合计：￥{yuan(checkoutPreview.total_amount_cent)}</span>
-                <span>优惠：￥{yuan(checkoutPreview.discount_amount_cent)}</span>
-                <strong>应付：￥{yuan(checkoutPreview.pay_amount_cent)}</strong>
-              </div>
-            ) : null}
-            <div className="checkout-row">
-              <label>
-                收货地址
-                <select value={selectedAddressId} onChange={(event) => setSelectedAddressId(event.target.value)}>
-                  <option value="">请选择地址</option>
-                  {addresses.map((address) => (
-                    <option key={address.id} value={address.id}>
-                      {address.receiver_name} {address.city} {address.detail_address}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                优惠券
-                <select value={selectedUserCouponId} onChange={(event) => setSelectedUserCouponId(event.target.value)}>
-                  <option value="">不使用优惠券</option>
-                  {myCoupons.map((coupon) => (
-                    <option key={coupon.id} value={coupon.id}>
-                      {coupon.template.name}（{statusText(coupon.status)}）
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <button onClick={createOrder}>提交订单</button>
-            </div>
-            <div className="checkout-row">
-              <input value={paymentId} onChange={(event) => setPaymentId(event.target.value)} placeholder="支付单 ID" />
-              <button onClick={payOrder}>模拟支付</button>
-            </div>
-          </section>
-
-          <section className="panel">
-            <div className="section-title">
-              <div>
-                <h2>我的订单</h2>
-                <p>商家发货后，用户在这里确认收货；完成后可评价或发起售后。</p>
-              </div>
-              <button onClick={loadOrders}>刷新订单</button>
-            </div>
-            <div className="order-list">
-              {orders.map((order) => (
-                <article
-                  className={`order-card ${selectedOrderId === String(order.id) ? 'selected' : ''}`}
-                  key={order.id}
+      <Row gutter={[24, 24]}>
+        <Col span={24}>
+          <Card className="category-card">
+            <Space size={[12, 12]} wrap>
+              <Button
+                type={categoryId === undefined ? 'primary' : 'default'}
+                onClick={() => {
+                  setCategoryId(undefined)
+                  void loadProducts(undefined)
+                }}
+              >
+                全部
+              </Button>
+              {categories.map((category) => (
+                <Button
+                  key={category.id}
+                  type={categoryId === category.id ? 'primary' : 'default'}
                   onClick={() => {
-                    setSelectedOrderId(String(order.id))
-                    setPaymentId(String(order.payment_id))
+                    setCategoryId(category.id)
+                    void loadProducts(category.id)
                   }}
                 >
-                  <div>
-                    <h3>{order.order_no}</h3>
-                    <div className="product-meta">
-                      <span>订单 #{order.id}</span>
-                      <span>支付单 #{order.payment_id}</span>
-                      <span>店铺 #{order.merchant_id}</span>
-                    </div>
-                    <p>{order.items.map((item) => `${item.product_name} x${item.quantity}`).join('、')}</p>
-                    {order.logistics_company ? (
-                      <p className="muted">
-                        物流：{order.logistics_company} / {order.tracking_no}
-                      </p>
-                    ) : null}
-                  </div>
-                  <div className="order-side">
-                    <strong>￥{yuan(order.pay_amount_cent)}</strong>
-                    <span className="status-pill">{statusText(order.status)}</span>
-                    {order.status === 'shipped' ? <button onClick={() => confirmOrder(order.id)}>确认收货</button> : null}
-                  </div>
-                </article>
+                  {category.name}
+                </Button>
               ))}
-              {orders.length === 0 ? <p className="muted">暂无订单。</p> : null}
-            </div>
-            <div className="button-row">
-              <button disabled={!selectedOrder} onClick={reviewSelectedOrder}>
-                给选中订单评价
-              </button>
-              <button disabled={!selectedOrder} onClick={refundSelectedOrder}>
-                给选中订单申请售后
-              </button>
-            </div>
-          </section>
-        </section>
+            </Space>
+          </Card>
+        </Col>
 
-        <aside className="side-column">
-          <section className="panel">
-            <div className="section-title">
-              <h2>收货地址</h2>
-              <button onClick={loadAddresses}>刷新</button>
-            </div>
-            <div className="compact-form">
-              <input value={receiverName} onChange={(event) => setReceiverName(event.target.value)} placeholder="收货人" />
-              <input
-                value={receiverMobile}
-                onChange={(event) => setReceiverMobile(event.target.value)}
-                placeholder="手机号"
-              />
-              <input
-                value={detailAddress}
-                onChange={(event) => setDetailAddress(event.target.value)}
-                placeholder="详细地址"
-              />
-              <button onClick={createAddress}>新增地址</button>
-            </div>
-            <div className="simple-list">
-              {addresses.map((address) => (
-                <button
-                  className={selectedAddressId === String(address.id) ? 'list-row selected' : 'list-row'}
-                  key={address.id}
-                  onClick={() => setSelectedAddressId(String(address.id))}
-                >
-                  <span>{address.receiver_name}</span>
-                  <small>地址 #{address.id} / {address.receiver_mobile}</small>
-                  <small>
-                    {address.city} {address.detail_address}
-                  </small>
-                </button>
-              ))}
-            </div>
-          </section>
+        <Col span={16}>
+          <Card
+            title="商品商城"
+            extra={
+              <Space>
+                <Input.Search
+                  allowClear
+                  placeholder="搜索商品"
+                  value={keyword}
+                  onChange={(event) => setKeyword(event.target.value)}
+                  onSearch={() => loadProducts()}
+                />
+                <Button onClick={() => loadProducts()}>刷新</Button>
+              </Space>
+            }
+          >
+            <Skeleton loading={loading} active>
+              {products.length === 0 ? (
+                <Empty description="暂无商品，请先在商家端上传商品" />
+              ) : (
+                <Row gutter={[16, 16]}>
+                  {products.map((product) => (
+                    <Col span={8} key={product.id}>
+                      <Card
+                        hoverable
+                        className="product-card"
+                        cover={
+                          product.cover_url ? (
+                            <Image preview={false} src={absoluteAssetUrl(product.cover_url)} />
+                          ) : (
+                            <div className="product-cover">商品图</div>
+                          )
+                        }
+                        actions={[<Button type="link" onClick={() => openProduct(product.id)}>查看详情</Button>]}
+                      >
+                        <Space direction="vertical" size={6}>
+                          <Space wrap>
+                            <Tag color="blue">商品 #{product.id}</Tag>
+                            <Tag>店铺 #{product.merchant_id}</Tag>
+                          </Space>
+                          <Text strong>{product.name}</Text>
+                          <Text type="secondary">{product.merchant_name}</Text>
+                          <Text className="price">￥{yuan(product.price_cent)}</Text>
+                        </Space>
+                      </Card>
+                    </Col>
+                  ))}
+                </Row>
+              )}
+            </Skeleton>
+          </Card>
 
-          <section className="panel">
-            <div className="section-title">
-              <h2>优惠券</h2>
-              <div className="button-row">
-                <button onClick={loadCoupons}>可领</button>
-                <button onClick={loadMyCoupons}>我的</button>
-              </div>
-            </div>
-            <div className="simple-list">
-              {coupons.map((coupon) => (
-                <article className="coupon-row" key={coupon.id}>
-                  <div>
-                    <strong>{coupon.name}</strong>
-                    <span>券模板 #{coupon.id} / {statusText(coupon.status)}</span>
-                    <span>满 ￥{yuan(coupon.min_amount_cent)} 减 ￥{yuan(coupon.discount_value)}</span>
-                  </div>
-                  <button onClick={() => claimCoupon(coupon.id)}>领取</button>
-                </article>
-              ))}
-            </div>
-            <div className="simple-list">
-              {myCoupons.map((coupon) => (
-                <button
-                  className={selectedUserCouponId === String(coupon.id) ? 'list-row selected' : 'list-row'}
-                  key={coupon.id}
-                  onClick={() => setSelectedUserCouponId(String(coupon.id))}
-                >
-                  <span>{coupon.template.name}</span>
-                  <small>我的券 #{coupon.id} / 模板 #{coupon.template.id}</small>
-                  <small>{statusText(coupon.status)}</small>
-                </button>
-              ))}
-            </div>
-          </section>
-
-          <section className="panel">
-            <div className="section-title">
-              <h2>社区</h2>
-              <button onClick={loadPosts}>刷新帖子</button>
-            </div>
-            <div className="compact-form">
-              <input value={postTitle} onChange={(event) => setPostTitle(event.target.value)} placeholder="标题" />
-              <textarea value={postContent} onChange={(event) => setPostContent(event.target.value)} placeholder="内容" />
-              <input
-                value={postProductIds}
-                onChange={(event) => setPostProductIds(event.target.value)}
-                placeholder="关联商品 ID，多个用逗号"
-              />
-              <div className="button-row">
-                <button onClick={() => createPost('normal')}>发普通帖</button>
-                <button onClick={() => createPost('grass')}>发种草帖</button>
-              </div>
-            </div>
-            <div className="simple-list">
+          <Card title="社区广场" className="section-card">
+            <Row gutter={[16, 16]}>
               {posts.map((post) => (
-                <article className={selectedPostId === String(post.id) ? 'post-row selected' : 'post-row'} key={post.id}>
-                  <button className="plain-select" onClick={() => setSelectedPostId(String(post.id))}>
-                    <strong>{post.title}</strong>
-                    <span>帖子 #{post.id} / {post.type}</span>
-                    <span>
-                      {post.author?.nickname || '匿名'} / {statusText(post.status)} / 点赞 {post.like_count} / 评论{' '}
-                      {post.comment_count}
-                    </span>
-                  </button>
-                  <div className="button-row">
-                    <button onClick={() => communityService.likePost(post.id).then(() => loadPosts())}>点赞</button>
-                    <button onClick={() => commentPost(post.id)}>评论</button>
-                  </div>
-                </article>
+                <Col span={8} key={post.id}>
+                  <Card
+                    hoverable
+                    className="post-card"
+                    cover={
+                      post.image_urls[0] ? (
+                        <Image preview={false} src={absoluteAssetUrl(post.image_urls[0])} />
+                      ) : (
+                        <div className="post-cover">{statusText(post.type)}</div>
+                      )
+                    }
+                    onClick={() => openPost(post)}
+                  >
+                    <Space direction="vertical" size={8} style={{ width: '100%' }}>
+                      <Space>
+                        <Tag color={post.type === 'grass' ? 'purple' : 'blue'}>{statusText(post.type)}</Tag>
+                        <Tag color={statusColor(post.status)}>{statusText(post.status)}</Tag>
+                      </Space>
+                      <Text strong>{post.title}</Text>
+                      <Paragraph ellipsis={{ rows: 2 }}>{post.content}</Paragraph>
+                      <div className="linked-products">
+                        关联商品：{post.product_ids.length ? post.product_ids.map((id) => `#${id}`).join('、') : '无'}
+                      </div>
+                      <Space split={<Divider type="vertical" />}>
+                        <Text>赞 {post.like_count}</Text>
+                        <Text>评 {post.comment_count}</Text>
+                      </Space>
+                    </Space>
+                  </Card>
+                </Col>
               ))}
-            </div>
-            <textarea
-              value={commentContent}
-              onChange={(event) => setCommentContent(event.target.value)}
-              placeholder="评论内容"
-            />
-          </section>
-        </aside>
-      </div>
+            </Row>
+            {posts.length === 0 ? <Empty description="暂无社区内容" /> : null}
+            <Divider />
+            <Card size="small" title="发布社区内容">
+              <Row gutter={[12, 12]}>
+                <Col span={8}><Input value={postTitle} onChange={(event) => setPostTitle(event.target.value)} placeholder="标题" /></Col>
+                <Col span={8}><Input value={postProductIds} onChange={(event) => setPostProductIds(event.target.value)} placeholder="关联商品 ID，逗号分隔" /></Col>
+                <Col span={8}>
+                  <Upload
+                    fileList={uploadFiles}
+                    beforeUpload={(file) => uploadPostImage(file)}
+                    onRemove={(file) => {
+                      setPostImages((items) => items.filter((item) => absoluteAssetUrl(item) !== file.url))
+                      return true
+                    }}
+                  >
+                    <Button>上传帖子图片</Button>
+                  </Upload>
+                </Col>
+                <Col span={24}><Input.TextArea rows={3} value={postContent} onChange={(event) => setPostContent(event.target.value)} /></Col>
+                <Col span={24}>
+                  <Space>
+                    <Button onClick={() => createPost('normal')}>发布普通帖</Button>
+                    <Button type="primary" onClick={() => createPost('grass')}>发布种草帖</Button>
+                    <Button onClick={loadPosts}>刷新帖子</Button>
+                  </Space>
+                </Col>
+              </Row>
+            </Card>
+          </Card>
+        </Col>
 
-      <DataPanel result={lastResult} />
+        <Col span={8}>
+          <Space direction="vertical" size={24} style={{ width: '100%' }}>
+            <Card title="购物车">
+              <List
+                dataSource={cart}
+                locale={{ emptyText: '购物车为空' }}
+                renderItem={(item) => (
+                  <List.Item
+                    actions={[
+                      <InputNumber
+                        min={1}
+                        value={item.quantity}
+                        onChange={(value) => changeCartQuantity(item, Number(value) || 1)}
+                      />,
+                      <Button danger type="link" onClick={() => removeCartItem(item)}>移除</Button>,
+                    ]}
+                  >
+                    <List.Item.Meta
+                      title={item.product_name}
+                      description={`${item.sku_name} / SKU #${item.sku_id}`}
+                    />
+                    <Text>￥{yuan(item.price_cent * item.quantity)}</Text>
+                  </List.Item>
+                )}
+              />
+              <Divider />
+              <Space direction="vertical" style={{ width: '100%' }}>
+                <Text strong>购物车合计：￥{yuan(cartTotal)}</Text>
+                <Select
+                  allowClear
+                  placeholder="选择我的优惠券"
+                  style={{ width: '100%' }}
+                  value={selectedUserCouponId}
+                  onChange={setSelectedUserCouponId}
+                  options={[
+                    { value: undefined, label: '不使用优惠券' },
+                    ...availableUserCoupons.map((coupon) => ({
+                      value: coupon.id,
+                      label: `#${coupon.id} ${coupon.template.name}（${statusText(coupon.status)}）`,
+                    })),
+                  ]}
+                />
+                <Space wrap>
+                  <Button onClick={loadCart}>刷新购物车</Button>
+                  <Button onClick={checkout}>结算预览</Button>
+                  <Button type="primary" onClick={createOrder}>提交订单</Button>
+                </Space>
+                {checkoutPreview ? (
+                  <Descriptions size="small" column={1}>
+                    <Descriptions.Item label="商品合计">￥{yuan(checkoutPreview.total_amount_cent)}</Descriptions.Item>
+                    <Descriptions.Item label="优惠">￥{yuan(checkoutPreview.discount_amount_cent)}</Descriptions.Item>
+                    <Descriptions.Item label="应付">￥{yuan(checkoutPreview.pay_amount_cent)}</Descriptions.Item>
+                  </Descriptions>
+                ) : null}
+              </Space>
+            </Card>
+
+            <Card title="收货地址">
+              <Space direction="vertical" style={{ width: '100%' }}>
+                <Input value={receiverName} onChange={(event) => setReceiverName(event.target.value)} placeholder="收货人" />
+                <Input value={receiverMobile} onChange={(event) => setReceiverMobile(event.target.value)} placeholder="手机号" />
+                <Input value={detailAddress} onChange={(event) => setDetailAddress(event.target.value)} placeholder="详细地址" />
+                <Button onClick={createAddress}>新增地址</Button>
+                <Select
+                  placeholder="选择地址"
+                  value={selectedAddressId}
+                  onChange={setSelectedAddressId}
+                  options={addresses.map((address) => ({
+                    value: address.id,
+                    label: `#${address.id} ${address.receiver_name} ${address.city}${address.detail_address}`,
+                  }))}
+                />
+              </Space>
+            </Card>
+
+            <Card title="优惠券">
+              <Space direction="vertical" style={{ width: '100%' }}>
+                <Space wrap>
+                  <Button onClick={loadCoupons}>刷新可领</Button>
+                  <Button onClick={loadMyCoupons}>刷新我的</Button>
+                </Space>
+                {coupons.map((coupon) => (
+                  <Card size="small" key={coupon.id}>
+                    <Space direction="vertical">
+                      <Text strong>{coupon.name}</Text>
+                      <Text>满 ￥{yuan(coupon.min_amount_cent)} 减 ￥{yuan(coupon.discount_value)}</Text>
+                      <Button type="primary" onClick={() => claimCoupon(coupon.id)}>领取</Button>
+                    </Space>
+                  </Card>
+                ))}
+              </Space>
+            </Card>
+          </Space>
+        </Col>
+
+        <Col span={24}>
+          <Card title="我的订单">
+            <List
+              grid={{ gutter: 16, column: 3 }}
+              dataSource={orders}
+              locale={{ emptyText: '暂无订单' }}
+              renderItem={(order) => (
+                <List.Item>
+                  <Card
+                    className={selectedOrderId === order.id ? 'selected-order-card' : ''}
+                    onClick={() => {
+                      setSelectedOrderId(order.id)
+                      setPaymentId(order.payment_id)
+                    }}
+                  >
+                    <Space direction="vertical" style={{ width: '100%' }}>
+                      <Space wrap>
+                        <Tag color="blue">订单 #{order.id}</Tag>
+                        <Tag>支付单 #{order.payment_id}</Tag>
+                        <Badge color={statusColor(order.status)} text={statusText(order.status)} />
+                      </Space>
+                      <Text strong>{order.order_no}</Text>
+                      <Text>{order.items.map((item) => `${item.product_name} x${item.quantity}`).join('、')}</Text>
+                      <Text className="price">￥{yuan(order.pay_amount_cent)}</Text>
+                      {order.logistics_company ? <Text type="secondary">物流：{order.logistics_company} / {order.tracking_no}</Text> : null}
+                      <Space wrap>
+                        <Button type="primary" disabled={order.status !== 'shipping'} onClick={() => confirmOrder(order.id)}>确认收货</Button>
+                        <Button disabled={order.status !== 'completed'} onClick={reviewSelectedOrder}>评价</Button>
+                        <Button disabled={!['shipping', 'pending_receipt', 'completed'].includes(order.status)} onClick={refundSelectedOrder}>售后</Button>
+                      </Space>
+                    </Space>
+                  </Card>
+                </List.Item>
+              )}
+            />
+            <Divider />
+            <Space>
+              <InputNumber value={paymentId} onChange={(value) => setPaymentId(Number(value) || undefined)} placeholder="支付单 ID" />
+              <Button type="primary" onClick={payOrder}>模拟支付</Button>
+              <Button onClick={loadOrders}>刷新订单</Button>
+            </Space>
+          </Card>
+        </Col>
+      </Row>
+
+      <Drawer
+        open={!!selectedProduct}
+        width={980}
+        title="商品详情"
+        onClose={() => setSelectedProduct(null)}
+      >
+        {selectedProduct ? (
+          <Row gutter={[24, 24]} className="product-detail-layout">
+            <Col span={11}>
+              <Image
+                className="detail-image"
+                src={absoluteAssetUrl(selectedProduct.cover_url || selectedProduct.images[0])}
+                fallback=""
+                preview={false}
+              />
+              <Card size="small" title="评价区" className="section-card">
+                <Text type="secondary">评价接口已支持，商品详情页后续可继续扩展评价列表。</Text>
+              </Card>
+            </Col>
+            <Col span={13}>
+              <Space direction="vertical" size={18} style={{ width: '100%' }}>
+                <Space wrap>
+                  <Tag color="blue">商品 #{selectedProduct.id}</Tag>
+                  <Tag>店铺 #{selectedProduct.merchant.id}</Tag>
+                  <Tag>分类 #{selectedProduct.category_id ?? '-'}</Tag>
+                </Space>
+                <Title level={2}>{selectedProduct.name}</Title>
+                <Paragraph>{selectedProduct.description || '暂无描述'}</Paragraph>
+                <Text className="detail-price">￥{yuan(selectedSku?.price_cent)}</Text>
+                <div className="sku-grid">
+                  {selectedProduct.skus.map((sku) => (
+                    <Button
+                      key={sku.id}
+                      type={selectedSkuId === sku.id ? 'primary' : 'default'}
+                      onClick={() => setSelectedSkuId(sku.id)}
+                    >
+                      {sku.name} / SKU #{sku.id} / 库存 {sku.stock}
+                    </Button>
+                  ))}
+                </div>
+                <Space>
+                  <InputNumber min={1} value={quantity} onChange={(value) => setQuantity(Number(value) || 1)} />
+                  <Button type="primary" size="large" onClick={addCart}>加入购物车</Button>
+                </Space>
+              </Space>
+            </Col>
+          </Row>
+        ) : null}
+      </Drawer>
+
+      <Modal
+        open={!!selectedPost}
+        title={selectedPost?.title}
+        onCancel={() => setSelectedPost(null)}
+        footer={null}
+        width={760}
+      >
+        {selectedPost ? (
+          <Space direction="vertical" size={16} style={{ width: '100%' }}>
+            <Space>
+              <Tag color={selectedPost.type === 'grass' ? 'purple' : 'blue'}>{statusText(selectedPost.type)}</Tag>
+              <Tag color={statusColor(selectedPost.status)}>{statusText(selectedPost.status)}</Tag>
+              <Text type="secondary">作者：{selectedPost.author?.nickname || '匿名'}</Text>
+            </Space>
+            <Paragraph>{selectedPost.content}</Paragraph>
+            {selectedPost.image_urls.length ? (
+              <Image.PreviewGroup>
+                <Space wrap>{selectedPost.image_urls.map((url) => <Image width={120} key={url} src={absoluteAssetUrl(url)} />)}</Space>
+              </Image.PreviewGroup>
+            ) : null}
+            <div className="linked-products">关联商品：{selectedPost.product_ids.map((id) => `#${id}`).join('、') || '无'}</div>
+            <Space>
+              <Button onClick={() => communityService.likePost(selectedPost.id).then(() => loadPosts())}>点赞</Button>
+            </Space>
+            <Divider />
+            <List
+              header="评论"
+              dataSource={comments}
+              locale={{ emptyText: '暂无评论' }}
+              renderItem={(comment) => (
+                <List.Item>
+                  <List.Item.Meta title={comment.author?.nickname || '匿名'} description={comment.content} />
+                </List.Item>
+              )}
+            />
+            <Space.Compact style={{ width: '100%' }}>
+              <Input value={commentContent} onChange={(event) => setCommentContent(event.target.value)} placeholder="写评论" />
+              <Button type="primary" onClick={() => commentPost(selectedPost.id)}>发送</Button>
+            </Space.Compact>
+          </Space>
+        ) : null}
+      </Modal>
+
+      <ApiHistory results={apiHistory} />
     </main>
   )
 }

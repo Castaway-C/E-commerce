@@ -14,11 +14,11 @@ export function AdminLayout({ children }: { children: ReactNode }) {
         </Link>
         <div className="nav-links">
           <Link to="/dashboard">管理首页</Link>
-          <Link to="/platform">平台运营</Link>
-          <Link to="/merchant">商家运营</Link>
+          <Link to="/platform">平台管理</Link>
+          <Link to="/merchant">商家管理</Link>
           <Link to="/merchant-apply">商家入驻</Link>
         </div>
-        <Link className="nav-ghost" to="/login">独立登录页</Link>
+        <Link className="nav-ghost" to="/login">双端登录</Link>
       </nav>
       {children}
     </>

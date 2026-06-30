@@ -3,10 +3,10 @@
 ## 当前阶段实现范围
 
 - 用户端已实现商品列表、商品详情、分类列表、店铺详情、店铺商品列表。
-- 管理端已实现分类创建、商家创建商品、商品列表、商品详情、编辑商品、编辑 SKU、提交审核、平台审核、上架、下架。
-- 店铺必须通过商家入驻审核创建，平台不能手动创建店铺；商品必须由审核通过的商家账号创建，平台仅负责分类、审核和商品监管。
-- 商品审核基础流程已实现；商家创建商品后为 `draft`，提交审核后为 `pending_audit`，平台审核通过后进入 `on_sale`，审核拒绝后进入 `audit_rejected`。
-- 为方便实训联调，仍保留快速上架接口 `POST /admin/products/{product_id}/publish`，后续正式页面可优先使用提交审核/平台审核流程。
+- 管理端已实现分类创建、商家创建商品、商品列表、商品详情、编辑商品、编辑 SKU、上架、下架。
+- 店铺必须通过商家入驻审核创建，平台不能手动创建店铺；商品由审核通过的商家账号创建，平台负责分类维护和商品监管。
+- 当前规则明确只有商家入驻需要事前审核；商品创建后默认 `on_sale`。平台保留上架/下架等管理权限。
+- 为兼容旧联调脚本，仍保留 `submit-audit` 和 `audit` 接口，但它们不再是必经流程。
 - 商家管理员 `merchant_operator` 已按 `merchant_id` 做权限边界，只能查看和操作本店商品。
 
 ## 用户端商品列表 `GET /products`
@@ -138,7 +138,7 @@ SKU 字段：
 | page | number | 否 | 页码 |
 | page_size | number | 否 | 每页数量 |
 
-说明：管理端会返回 `draft`、`pending_audit`、`on_sale`、`off_sale`、`audit_rejected` 等全部商品状态。列表项直接返回可运营字段，包括商品 ID、分类 ID、店铺 ID、状态、SKU ID、SKU 价格和库存，前端不应要求使用者通过接口返回排查区查 ID。
+说明：当前商品创建后默认 `on_sale`；管理端主要展示 `on_sale`、`off_sale` 等运营状态。旧数据或兼容接口可能仍出现 `draft`、`pending_audit`、`audit_rejected`，但它们不再是新商品发布的必经流程。列表项直接返回可运营字段，包括商品 ID、分类 ID、店铺 ID、状态、SKU ID、SKU 价格和库存，前端不应要求使用者通过接口返回排查区查 ID。
 
 响应列表项为 `ProductDetailResponse` 摘要结构，关键字段：
 
@@ -161,7 +161,7 @@ SKU 字段：
 权限：
 
 - 仅 `merchant_operator` 可创建商品，并且只能使用自己绑定的 `merchant_id`。
-- `platform_operator` 调用会返回 `40003/403`，平台只负责分类、审核和商品监管。
+- `platform_operator` 调用会返回 `40003/403`，平台只负责分类和商品监管。
 
 请求：
 
@@ -185,7 +185,7 @@ SKU 字段：
 }
 ```
 
-响应：`ProductDetailResponse`，新商品默认 `status=draft`。
+响应：`ProductDetailResponse`，新商品默认 `status=on_sale`。
 
 ## 管理端编辑商品 `PUT /admin/products/{product_id}`
 
@@ -263,8 +263,8 @@ SKU 字段：
 
 | 方法 | 路径 | 说明 |
 |---|---|---|
-| POST | `/admin/products/{product_id}/submit-audit` | 提交审核，状态变为 `pending_audit` |
-| POST | `/admin/products/{product_id}/audit` | 平台审核，通过变为 `on_sale`，拒绝变为 `audit_rejected` |
+| POST | `/admin/products/{product_id}/submit-audit` | 兼容旧接口，当前会保持/变为 `on_sale` |
+| POST | `/admin/products/{product_id}/audit` | 兼容旧接口，通过为 `on_sale`，拒绝为 `off_sale` |
 | POST | `/admin/products/{product_id}/publish` | 上架商品，状态变为 `on_sale` |
 | POST | `/admin/products/{product_id}/unpublish` | 下架商品，状态变为 `off_sale` |
 | POST | `/admin/products/batch-publish` | 批量上架商品，状态变为 `on_sale` |
@@ -272,8 +272,7 @@ SKU 字段：
 
 权限：
 
-- 提交审核：平台运营可提交全平台商品，商家运营只能提交本店商品。
-- 审核商品：仅平台运营可操作。
+- 兼容审核接口：仅平台运营可调用 `/audit`；当前用于监管上架/下架，不作为商品发布前置流程。
 - 快速上架/下架：平台运营可操作全平台商品，商家运营只能操作本店商品。
 - 批量上架/下架：平台运营可操作全平台商品，商家运营只能操作本店商品；只要列表中包含越权商品，接口会拒绝。
 
@@ -293,11 +292,8 @@ SKU 字段：
 
 | 状态 | 说明 |
 |---|---|
-| draft | 草稿 |
-| pending_audit | 待审核 |
 | on_sale | 在售 |
 | off_sale | 下架 |
-| audit_rejected | 审核拒绝 |
 
 ## 错误码
 

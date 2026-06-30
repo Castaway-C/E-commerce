@@ -63,10 +63,10 @@ async def test_community_post_audit_like_and_comment_flow() -> None:
         )
         assert create_post_response.status_code == 200
         post_id = create_post_response.json()["data"]["id"]
-        assert create_post_response.json()["data"]["status"] == "pending_audit"
+        assert create_post_response.json()["data"]["status"] == "published"
 
         public_before = await client.get("/api/v1/community/posts")
-        assert all(post["id"] != post_id for post in public_before.json()["data"]["list"])
+        assert any(post["id"] == post_id for post in public_before.json()["data"]["list"])
 
         pending_posts = await client.get("/api/v1/admin/community/posts", headers=admin_headers)
         assert pending_posts.status_code == 200
@@ -92,10 +92,10 @@ async def test_community_post_audit_like_and_comment_flow() -> None:
         )
         assert comment_response.status_code == 200
         comment_id = comment_response.json()["data"]["id"]
-        assert comment_response.json()["data"]["status"] == "pending_audit"
+        assert comment_response.json()["data"]["status"] == "published"
 
         public_comments_before = await client.get(f"/api/v1/community/posts/{post_id}/comments")
-        assert public_comments_before.json()["data"]["total"] == 0
+        assert public_comments_before.json()["data"]["total"] == 1
 
         pending_comments = await client.get("/api/v1/admin/community/comments", headers=admin_headers)
         assert pending_comments.status_code == 200

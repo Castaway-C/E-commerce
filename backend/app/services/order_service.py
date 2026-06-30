@@ -331,7 +331,7 @@ class OrderService:
             score=payload.score,
             content=payload.content,
             image_urls=json.dumps(payload.image_urls, ensure_ascii=False),
-            status="pending_audit",
+            status="published",
         )
         db.add(review)
         await db.commit()
@@ -360,9 +360,7 @@ class OrderService:
         review = await db.get(ProductReview, review_id)
         if review is None:
             raise AppException(40004, "评价不存在", 404)
-        if review.status not in {"pending_audit", "published"}:
-            raise AppException(40008, "当前评价状态不允许审核")
-        review.status = "published" if approved else "rejected"
+        review.status = "published" if approved else "hidden"
         await db.commit()
         await db.refresh(review)
         return self._review_to_response(review)

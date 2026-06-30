@@ -51,7 +51,7 @@ class ProductService:
             name=payload.name,
             description=payload.description,
             cover_url=payload.cover_url or (payload.image_urls[0] if payload.image_urls else None),
-            status="draft",
+            status="on_sale",
         )
         product.skus = [
             Sku(
@@ -77,7 +77,7 @@ class ProductService:
         payload: ProductCreateRequest,
     ) -> Product:
         if admin.role != "merchant_operator":
-            raise ForbiddenException("商品必须由审核通过的商家创建，平台仅负责审核和管理")
+            raise ForbiddenException("商品必须由已入驻商家创建，平台仅负责分类和商品监管")
         self._assert_can_manage_merchant(admin, payload.merchant_id)
         return await self.create_product(db, payload)
 
@@ -260,17 +260,15 @@ class ProductService:
 
     async def submit_product_audit_for_admin(self, db: AsyncSession, admin: AdminUser, product_id: int) -> Product:
         product = await self.get_product_detail_for_admin(db, admin, product_id)
-        if product.status not in {"draft", "off_sale", "audit_rejected"}:
-            raise AppException(40008, "当前商品状态不允许提交审核")
-        product.status = "pending_audit"
+        if product.status not in {"draft", "off_sale", "audit_rejected", "on_sale"}:
+            raise AppException(40008, "当前商品状态不允许提交")
+        product.status = "on_sale"
         await db.commit()
         return await self.get_product_detail(db, product_id, include_off_sale=True)
 
     async def audit_product(self, db: AsyncSession, product_id: int, approved: bool) -> Product:
         product = await self.get_product_detail(db, product_id, include_off_sale=True)
-        if product.status != "pending_audit":
-            raise AppException(40008, "当前商品状态不允许审核")
-        product.status = "on_sale" if approved else "audit_rejected"
+        product.status = "on_sale" if approved else "off_sale"
         await db.commit()
         return await self.get_product_detail(db, product_id, include_off_sale=True)
 

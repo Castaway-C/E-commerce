@@ -225,9 +225,10 @@ async def test_receipt_review_and_refund_flow() -> None:
         )
         assert review_response.status_code == 200
         review_id = review_response.json()["data"]["id"]
+        assert review_response.json()["data"]["status"] == "published"
 
         public_reviews_before = await client.get(f"/api/v1/products/{product_id}/reviews")
-        assert public_reviews_before.json()["data"]["total"] == 0
+        assert public_reviews_before.json()["data"]["total"] >= 1
 
         audit_response = await client.post(
             f"/api/v1/admin/reviews/{review_id}/audit",

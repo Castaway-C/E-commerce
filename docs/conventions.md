@@ -30,4 +30,4 @@
 - 登出黑名单当前使用内存实现，后续接 Redis 时保持接口不变。
 - 开发环境允许自动建表，迁移脚本在后续模型稳定后补齐。
 - 用户端 token 存储键名为 `user_access_token`、`user_refresh_token`。
-- 管理端 token 存储键名为 `admin_access_token`、`admin_refresh_token`。
+- 管理端允许平台账号和商家账号同时登录：平台端 token 存储键名为 `platform_admin_access_token`、`platform_admin_refresh_token`；商家端 token 存储键名为 `merchant_admin_access_token`、`merchant_admin_refresh_token`。

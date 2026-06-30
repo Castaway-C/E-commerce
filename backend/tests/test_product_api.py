@@ -243,17 +243,17 @@ async def test_product_submit_audit_and_platform_audit_flow() -> None:
         )
         assert product_response.status_code == 200
         product_id = product_response.json()["data"]["id"]
-        assert product_response.json()["data"]["status"] == "draft"
+        assert product_response.json()["data"]["status"] == "on_sale"
 
         submit_response = await client.post(
             f"/api/v1/admin/products/{product_id}/submit-audit",
             headers=merchant_headers,
         )
         assert submit_response.status_code == 200
-        assert submit_response.json()["data"]["status"] == "pending_audit"
+        assert submit_response.json()["data"]["status"] == "on_sale"
 
         public_detail_before = await client.get(f"/api/v1/products/{product_id}")
-        assert public_detail_before.status_code == 404
+        assert public_detail_before.status_code == 200
 
         merchant_audit_response = await client.post(
             f"/api/v1/admin/products/{product_id}/audit",

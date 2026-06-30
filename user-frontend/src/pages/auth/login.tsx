@@ -1,40 +1,53 @@
-import { FormEvent, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Button, Card, Col, Form, Input, Row, Space, Typography, message } from 'antd'
+import { Link, useNavigate } from 'react-router-dom'
 
 import { authService } from '../../services/auth'
 
+const { Title, Paragraph, Text } = Typography
+
 export function LoginPage() {
   const navigate = useNavigate()
-  const [account, setAccount] = useState('')
-  const [password, setPassword] = useState('')
-  const [message, setMessage] = useState('')
+  const [api, contextHolder] = message.useMessage()
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    setMessage('')
+  async function handleSubmit(values: { account: string; password: string }) {
     try {
-      await authService.login({ account, password })
-      navigate('/user')
+      await authService.login(values)
+      api.success('登录成功，正在进入商城')
+      navigate('/')
     } catch {
-      setMessage('登录失败，请检查账号和密码')
+      api.error('登录失败，请检查手机号和密码')
     }
   }
 
   return (
-    <main>
-      <h1>用户登录</h1>
-      <form onSubmit={handleSubmit}>
-        <label>
-          手机号
-          <input value={account} onChange={(event) => setAccount(event.target.value)} />
-        </label>
-        <label>
-          密码
-          <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} />
-        </label>
-        <button type="submit">登录</button>
-      </form>
-      {message && <p>{message}</p>}
+    <main className="shop-page">
+      {contextHolder}
+      <section className="shop-hero auth-hero">
+        <div>
+          <Text className="eyebrow">用户账号</Text>
+          <Title level={1}>登录一次买够</Title>
+          <Paragraph>登录后可加入购物车、提交订单、模拟支付、确认收货，并发布社区帖子。</Paragraph>
+        </div>
+      </section>
+
+      <Row justify="center">
+        <Col xs={24} md={14} lg={10}>
+          <Card title="用户登录">
+            <Form layout="vertical" onFinish={handleSubmit} initialValues={{ password: '12345678' }}>
+              <Form.Item label="手机号" name="account" rules={[{ required: true, message: '请输入手机号' }]}>
+                <Input placeholder="请输入注册手机号" />
+              </Form.Item>
+              <Form.Item label="密码" name="password" rules={[{ required: true, min: 8, message: '请输入至少 8 位密码' }]}>
+                <Input.Password />
+              </Form.Item>
+              <Space>
+                <Button type="primary" htmlType="submit">登录</Button>
+                <Link to="/register">还没有账号，去注册</Link>
+              </Space>
+            </Form>
+          </Card>
+        </Col>
+      </Row>
     </main>
   )
 }

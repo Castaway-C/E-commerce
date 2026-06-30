@@ -346,7 +346,7 @@
 
 | action | 说明 |
 |---|---|
-| product.audit | 商品审核 |
+| product.audit | 商品监管兼容接口，当前用于上架/下架 |
 | order.ship | 订单发货 |
 | refund.approve | 同意售后 |
 | refund.reject | 拒绝售后 |
@@ -363,12 +363,12 @@
 |---|---|---|---|
 | GET | `/products` | 全平台商品 | 自动过滤为本店商品 |
 | GET | `/products/{id}` | 商品详情 | 仅本店商品可查看 |
-| POST | `/products` | 创建任意店铺商品 | 仅可创建本店商品 |
+| POST | `/products` | 不可用，平台不创建商品 | 仅可创建本店商品 |
 | PUT | `/products/{id}` | 编辑商品基础信息 | 仅可编辑本店商品 |
 | PATCH | `/products/{id}/skus/{sku_id}` | 编辑 SKU 价格、库存、规格 | 仅可编辑本店商品 SKU |
 | GET | `/products/{id}/skus/{sku_id}/stock-logs` | 查看 SKU 库存流水 | 仅可查看本店商品 SKU |
-| POST | `/products/{id}/submit-audit` | 提交商品审核 | 仅本店商品可提交 |
-| POST | `/products/{id}/audit` | 平台审核商品 | 不可用 |
+| POST | `/products/{id}/submit-audit` | 兼容旧接口，当前保持/变为上架 | 仅本店商品可调用 |
+| POST | `/products/{id}/audit` | 兼容旧接口，通过为上架，拒绝为下架 | 不可用 |
 | POST | `/products/{id}/publish` | 商品上架 | 仅本店商品可上架 |
 | POST | `/products/{id}/unpublish` | 商品下架 | 仅本店商品可下架 |
 | POST | `/products/batch-publish` | 批量上架商品 | 仅本店商品可批量上架 |
@@ -376,7 +376,7 @@
 | POST | `/merchants` | 创建店铺 | 不可用 |
 | POST | `/categories` | 创建分类 | 不可用 |
 
-商品接口当前已支持基础创建、列表、详情、编辑、SKU 价格/库存调整、手动库存流水、提交审核、平台审核、单个/批量上下架和商家管理员边界。后续进入细化阶段时可补充下单/退款库存流水和更完整的规格管理。
+商品接口当前已支持基础创建、列表、详情、编辑、SKU 价格/库存调整、手动库存流水、单个/批量上下架和商家管理员边界。当前只有商家入驻需要事前审核；商品由商家创建后默认上架，平台保留监管和上下架能力。后续进入细化阶段时可补充更完整的规格管理。
 
 ### PUT `/products/{id}`
 
@@ -565,16 +565,18 @@
 
 当前促销已实现优惠券模板创建、编辑、停用、领取、范围校验、下单抵扣、按用户 ID 批量发券和手动过期作废；满减、限时价和拼团后续再补。
 
-## 社区审核
+## 社区内容管理
 
 | 方法 | 路径 | 说明 |
 |---|---|---|
-| GET | `/community/posts` | 帖子审核列表 |
-| POST | `/community/posts/{id}/audit` | 审核帖子 |
+| GET | `/community/posts` | 帖子管理列表，默认查询已发布内容 |
+| POST | `/community/posts/{id}/audit` | 兼容旧审核接口，通过为公开，拒绝为隐藏 |
 | POST | `/community/posts/{id}/hide` | 隐藏帖子 |
-| GET | `/community/comments` | 评论审核列表 |
-| POST | `/community/comments/{id}/audit` | 审核评论 |
+| GET | `/community/comments` | 评论管理列表，默认查询已发布内容 |
+| POST | `/community/comments/{id}/audit` | 兼容旧审核接口，通过为公开，拒绝为隐藏 |
 | POST | `/community/comments/{id}/hide` | 隐藏评论 |
+
+说明：当前规则明确只有商家入驻需要事前审核。帖子和评论发布后默认 `published`，平台管理端保留隐藏、兼容审核接口等管理能力。
 
 ## 错误码
 
@@ -584,4 +586,4 @@
 | 40002 | 401 | 管理端 token 缺失、无效或过期 |
 | 40003 | 403 | 普通用户访问管理端、角色无权限或越权访问 |
 | 40004 | 404 | 数据不存在 |
-| 40008 | 400 | 当前状态不允许执行操作，如发货、审核、退款 |
+| 40008 | 400 | 当前状态不允许执行操作，如发货、商家入驻审核、退款 |

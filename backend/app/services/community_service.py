@@ -19,10 +19,6 @@ from app.schemas.community import (
 class CommunityService:
     async def create_post(self, db: AsyncSession, user: User, payload: PostCreateRequest) -> PostResponse:
         product_ids = list(dict.fromkeys(payload.product_ids))
-        if payload.type == "grass":
-            if not product_ids:
-                raise AppException(40005, "种草帖必须关联已购商品")
-            await self._ensure_user_bought_products(db, user.id, product_ids)
         post = CommunityPost(
             user_id=user.id,
             type=payload.type,
@@ -31,7 +27,7 @@ class CommunityService:
             image_urls=json.dumps(payload.image_urls, ensure_ascii=False),
             product_ids=json.dumps(product_ids, ensure_ascii=False),
             topic_tags=json.dumps(payload.topic_tags, ensure_ascii=False),
-            status="pending_audit",
+            status="published",
         )
         db.add(post)
         await db.commit()
@@ -68,9 +64,7 @@ class CommunityService:
 
     async def audit_post(self, db: AsyncSession, post_id: int, approved: bool) -> PostResponse:
         post = await self._get_post(db, post_id)
-        if post.status not in {"pending_audit", "published"}:
-            raise AppException(40008, "当前帖子状态不允许审核")
-        post.status = "published" if approved else "rejected"
+        post.status = "published" if approved else "hidden"
         await db.commit()
         await db.refresh(post)
         return await self._post_to_response(db, post)
@@ -108,7 +102,7 @@ class CommunityService:
         post = await self._get_post(db, post_id)
         if post.status != "published":
             raise AppException(40008, "当前帖子状态不允许评论")
-        comment = CommunityComment(post_id=post_id, user_id=user.id, content=payload.content, status="pending_audit")
+        comment = CommunityComment(post_id=post_id, user_id=user.id, content=payload.content, status="published")
         db.add(comment)
         await db.commit()
         await db.refresh(comment)
@@ -135,9 +129,7 @@ class CommunityService:
 
     async def audit_comment(self, db: AsyncSession, comment_id: int, approved: bool) -> CommentResponse:
         comment = await self._get_comment(db, comment_id)
-        if comment.status not in {"pending_audit", "published"}:
-            raise AppException(40008, "当前评论状态不允许审核")
-        comment.status = "published" if approved else "rejected"
+        comment.status = "published" if approved else "hidden"
         await db.commit()
         await db.refresh(comment)
         return await self._comment_to_response(db, comment)

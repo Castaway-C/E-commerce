@@ -1,60 +1,55 @@
+import {
+  Button,
+  Card,
+  Col,
+  Form,
+  Image,
+  Input,
+  InputNumber,
+  Row,
+  Select,
+  Space,
+  Table,
+  Tag,
+  Typography,
+  Upload,
+  message,
+} from 'antd'
+import type { ColumnsType } from 'antd/es/table'
+import type { UploadFile } from 'antd'
 import { useEffect, useMemo, useState } from 'react'
 import { http } from '../../services/http'
+import { uploadService } from '../../services/upload'
 import {
-  Empty,
-  Field,
-  Panel,
-  ResultBoard,
-  TextArea,
+  DebugLogs,
+  StatusTag,
   formatError,
   ids,
   pickData,
-  randomText,
   statusText,
-  type ApiResult,
+  type ApiLog,
   yuan,
   yuanToCent,
-} from './shared'
+} from './adminShared'
 
-type PageResult<T> = {
-  list: T[]
-  total: number
-}
+const { Title, Paragraph, Text } = Typography
+const SESSION = 'merchant'
 
-type AdminProfile = {
-  id: number
-  username: string
-  real_name: string
-  role: string
-  merchant_id?: number | null
-}
-
-type Category = {
-  id: number
-  name: string
-  parent_id?: number | null
-  sort_order: number
-}
-
+type PageResult<T> = { list: T[]; total: number }
+type AdminProfile = { id: number; username: string; real_name: string; role: string; merchant_id?: number | null }
+type Category = { id: number; name: string; parent_id?: number | null; sort_order: number }
 type Product = {
   id: number
   name: string
   description?: string
+  cover_url?: string | null
+  images?: string[]
   category_id?: number | null
   status: string
   merchant: { id: number; name: string }
   skus: Array<{ id: number; name: string; price_cent: number; stock: number }>
 }
-
-type Order = {
-  id: number
-  order_no: string
-  user_id: number
-  merchant_id: number
-  status: string
-  pay_amount_cent: number
-}
-
+type Order = { id: number; order_no: string; user_id: number; merchant_id: number; status: string; pay_amount_cent: number }
 type Coupon = {
   id: number
   name: string
@@ -67,7 +62,12 @@ type Coupon = {
   claimed_quantity: number
 }
 
-function asList<T>(data: unknown) {
+function assetUrl(url?: string | null) {
+  if (!url) return undefined
+  return /^https?:\/\//.test(url) ? url : `http://localhost:8000${url}`
+}
+
+function pageList<T>(data: unknown) {
   return ((data as PageResult<T> | null)?.list ?? []) as T[]
 }
 
@@ -76,162 +76,158 @@ function directList<T>(data: unknown) {
 }
 
 export function MerchantWorkbenchPage() {
-  const [lastResult, setLastResult] = useState<ApiResult>(null)
+  const [api, contextHolder] = message.useMessage()
+  const [logs, setLogs] = useState<ApiLog[]>([])
   const [profile, setProfile] = useState<AdminProfile | null>(null)
   const [categories, setCategories] = useState<Category[]>([])
   const [products, setProducts] = useState<Product[]>([])
   const [orders, setOrders] = useState<Order[]>([])
   const [coupons, setCoupons] = useState<Coupon[]>([])
+  const [imageUrls, setImageUrls] = useState<string[]>([])
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
-
-  const [categoryId, setCategoryId] = useState('')
-  const [productName, setProductName] = useState(randomText('本店商品'))
-  const [productDescription, setProductDescription] = useState('商家运营创建的测试商品')
-  const [skuName, setSkuName] = useState('默认规格')
-  const [skuPriceYuan, setSkuPriceYuan] = useState('19.99')
-  const [skuStock, setSkuStock] = useState('10')
-  const [couponName, setCouponName] = useState(randomText('本店券'))
-  const [couponDiscountYuan, setCouponDiscountYuan] = useState('5.00')
-  const [couponMinYuan, setCouponMinYuan] = useState('10.00')
-  const [couponTotal, setCouponTotal] = useState('20')
-  const [batchProductIds, setBatchProductIds] = useState('')
-  const [shippingCompany, setShippingCompany] = useState('测试快递')
-  const [trackingNo, setTrackingNo] = useState(randomText('LOG'))
-
-  const selectedSku = useMemo(() => selectedProduct?.skus[0] ?? null, [selectedProduct])
+  const [shippingForm] = Form.useForm()
   const merchantId = profile?.merchant_id ?? null
 
-  async function run(title: string, action: () => Promise<unknown>) {
+  async function run<T>(title: string, action: () => Promise<unknown>): Promise<T | null> {
     try {
       const response = await action()
       const data = pickData(response)
-      setLastResult({ title, ok: true, data })
-      return data
+      setLogs((items) => [{ title, ok: true, data, time: new Date().toLocaleTimeString() }, ...items].slice(0, 8))
+      return data as T
     } catch (error) {
       const data = formatError(error)
-      setLastResult({ title, ok: false, data })
+      setLogs((items) => [{ title, ok: false, data, time: new Date().toLocaleTimeString() }, ...items].slice(0, 8))
+      api.error(`${title}失败`)
       return null
     }
   }
 
   async function loadMe() {
-    const data = await run('当前商家账号', () => http.get('/admin/auth/me'))
-    if (data) setProfile(data as AdminProfile)
+    const data = await run<AdminProfile>('当前商家账号', () => http.get('/admin/auth/me', { headers: { 'X-Admin-Session': SESSION } }))
+    if (data) setProfile(data)
   }
 
   async function loadCategories() {
-    const data = await run('分类列表', () => http.get('/categories'))
-    const list = directList<Category>(data)
-    setCategories(list)
-    if (!categoryId && list[0]) setCategoryId(String(list[0].id))
+    const data = await run<Category[]>('分类列表', () => http.get('/categories'))
+    setCategories(directList<Category>(data))
   }
 
   async function loadProducts() {
-    const data = await run('本店商品列表', () => http.get('/admin/products'))
-    const list = asList<Product>(data)
-    setProducts(list)
-    if (!selectedProduct && list[0]) setSelectedProduct(list[0])
+    const data = await run<PageResult<Product>>('本店商品', () => http.get('/admin/products', { headers: { 'X-Admin-Session': SESSION } }))
+    setProducts(pageList<Product>(data))
   }
 
-  async function createProduct() {
-    if (!merchantId) return
-    const data = await run('创建本店商品', () =>
-      http.post('/admin/products', {
-        merchant_id: merchantId,
-        category_id: categoryId ? Number(categoryId) : null,
-        name: productName,
-        description: productDescription,
-        image_urls: [],
-        skus: [
-          {
-            name: skuName,
-            price_cent: yuanToCent(skuPriceYuan) ?? 0,
-            stock: Number(skuStock) || 0,
-            spec_values: { 规格: skuName },
-          },
-        ],
-      }),
-    )
-    if (data) setSelectedProduct(data as Product)
-    await loadProducts()
-  }
-
-  async function updateProduct() {
-    if (!selectedProduct) return
-    await run('编辑本店商品', () =>
-      http.put(`/admin/products/${selectedProduct.id}`, {
-        category_id: categoryId ? Number(categoryId) : null,
-        name: productName,
-        description: productDescription,
-      }),
-    )
-    await loadProducts()
-  }
-
-  async function updateSku() {
-    if (!selectedProduct || !selectedSku) return
-    await run('修改 SKU', () =>
-      http.patch(`/admin/products/${selectedProduct.id}/skus/${selectedSku.id}`, {
-        name: skuName,
-        price_cent: yuanToCent(skuPriceYuan),
-        stock: Number(skuStock),
-      }),
-    )
-    await loadProducts()
-  }
-
-  async function productAction(productId: number, action: 'submit' | 'publish' | 'unpublish') {
-    const map = {
-      submit: () => http.post(`/admin/products/${productId}/submit-audit`),
-      publish: () => http.post(`/admin/products/${productId}/publish`),
-      unpublish: () => http.post(`/admin/products/${productId}/unpublish`),
+  async function createProduct(values: {
+    category_id?: number
+    name: string
+    description?: string
+    sku_name: string
+    price_yuan: number
+    stock: number
+  }) {
+    if (!merchantId) {
+      api.warning('当前账号尚未绑定店铺，请先完成平台审核')
+      return
     }
-    await run(`本店商品操作：${action}`, map[action])
+    await run('创建商品', () =>
+      http.post(
+        '/admin/products',
+        {
+          merchant_id: merchantId,
+          category_id: values.category_id ?? null,
+          name: values.name,
+          description: values.description ?? '',
+          cover_url: imageUrls[0] ?? null,
+          image_urls: imageUrls,
+          skus: [
+            {
+              name: values.sku_name,
+              price_cent: yuanToCent(values.price_yuan),
+              stock: values.stock,
+              spec_values: { 规格: values.sku_name },
+            },
+          ],
+        },
+        { headers: { 'X-Admin-Session': SESSION } },
+      ),
+    )
+    setImageUrls([])
     await loadProducts()
   }
 
-  async function batchAction(action: 'publish' | 'unpublish') {
-    await run(action === 'publish' ? '批量上架' : '批量下架', () =>
-      http.post(`/admin/products/batch-${action}`, { product_ids: ids(batchProductIds) }),
+  async function updateSelectedSku(values: { price_yuan?: number; stock?: number }) {
+    const sku = selectedProduct?.skus[0]
+    if (!selectedProduct || !sku) return
+    await run('修改 SKU', () =>
+      http.patch(
+        `/admin/products/${selectedProduct.id}/skus/${sku.id}`,
+        {
+          price_cent: values.price_yuan === undefined ? undefined : yuanToCent(values.price_yuan),
+          stock: values.stock,
+        },
+        { headers: { 'X-Admin-Session': SESSION } },
+      ),
+    )
+    await loadProducts()
+  }
+
+  async function productStatus(productId: number, action: 'publish' | 'unpublish') {
+    await run(action === 'publish' ? '商品上架' : '商品下架', () =>
+      http.post(`/admin/products/${productId}/${action}`, undefined, { headers: { 'X-Admin-Session': SESSION } }),
     )
     await loadProducts()
   }
 
   async function loadOrders() {
-    const data = await run('本店订单列表', () => http.get('/admin/orders'))
-    setOrders(asList<Order>(data))
+    const data = await run<PageResult<Order>>('本店订单', () => http.get('/admin/orders', { headers: { 'X-Admin-Session': SESSION } }))
+    setOrders(pageList<Order>(data))
   }
 
   async function shipOrder(orderId: number) {
-    await run('本店订单发货', () =>
-      http.post(`/admin/orders/${orderId}/ship`, {
-        logistics_company: shippingCompany,
-        tracking_no: trackingNo,
-      }),
+    const values = shippingForm.getFieldsValue()
+    await run('订单发货', () =>
+      http.post(
+        `/admin/orders/${orderId}/ship`,
+        {
+          logistics_company: values.logistics_company || '商家配送',
+          tracking_no: values.tracking_no || `NO${Date.now()}`,
+        },
+        { headers: { 'X-Admin-Session': SESSION } },
+      ),
     )
     await loadOrders()
   }
 
   async function loadCoupons() {
-    const data = await run('本店优惠券', () => http.get('/admin/promotions/coupons'))
+    const data = await run<Coupon[]>('本店优惠券', () => http.get('/admin/promotions/coupons', { headers: { 'X-Admin-Session': SESSION } }))
     setCoupons(directList<Coupon>(data))
   }
 
-  async function createCoupon() {
+  async function createCoupon(values: { name: string; discount_yuan: number; min_yuan: number; total_quantity: number }) {
     if (!merchantId) return
     await run('创建本店优惠券', () =>
-      http.post('/admin/promotions/coupons', {
-        name: couponName,
-        scope_type: 'merchant',
-        scope_ids: [merchantId],
-        discount_type: 'amount',
-        discount_value: yuanToCent(couponDiscountYuan) ?? 0,
-        min_amount_cent: yuanToCent(couponMinYuan) ?? 0,
-        total_quantity: Number(couponTotal) || 1,
-        per_user_limit: 1,
-      }),
+      http.post(
+        '/admin/promotions/coupons',
+        {
+          name: values.name,
+          scope_type: 'merchant',
+          scope_ids: [merchantId],
+          discount_type: 'amount',
+          discount_value: yuanToCent(values.discount_yuan),
+          min_amount_cent: yuanToCent(values.min_yuan),
+          total_quantity: values.total_quantity,
+          per_user_limit: 1,
+        },
+        { headers: { 'X-Admin-Session': SESSION } },
+      ),
     )
     await loadCoupons()
+  }
+
+  async function uploadImage(file: File) {
+    const data = await run<{ url: string }>('上传商品图片', () => uploadService.uploadImage(file, SESSION))
+    if (data?.url) setImageUrls((items) => [...items, data.url])
+    return false
   }
 
   useEffect(() => {
@@ -242,239 +238,159 @@ export function MerchantWorkbenchPage() {
     void loadCoupons()
   }, [])
 
-  useEffect(() => {
-    if (selectedProduct) {
-      setProductName(selectedProduct.name)
-      setProductDescription(selectedProduct.description || '')
-      setCategoryId(selectedProduct.category_id ? String(selectedProduct.category_id) : '')
-      if (selectedProduct.skus[0]) {
-        setSkuName(selectedProduct.skus[0].name)
-        setSkuPriceYuan(yuan(selectedProduct.skus[0].price_cent))
-        setSkuStock(String(selectedProduct.skus[0].stock))
-      }
-    }
-  }, [selectedProduct])
+  const uploadFiles: UploadFile[] = imageUrls.map((url, index) => ({
+    uid: `${index}`,
+    name: url.split('/').pop() || `image-${index}`,
+    status: 'done',
+    url: assetUrl(url),
+  }))
+
+  const productColumns: ColumnsType<Product> = [
+    {
+      title: '商品',
+      dataIndex: 'name',
+      render: (_, record) => (
+        <Space>
+          {record.cover_url ? <Image width={58} height={58} src={assetUrl(record.cover_url)} /> : <div className="table-thumb">图</div>}
+          <Space direction="vertical" size={0}>
+            <Text strong>{record.name}</Text>
+            <Text type="secondary">商品 #{record.id} / 分类 #{record.category_id ?? '-'}</Text>
+          </Space>
+        </Space>
+      ),
+    },
+    { title: '状态', dataIndex: 'status', render: (status) => <StatusTag status={status} /> },
+    {
+      title: 'SKU',
+      render: (_, record) => record.skus.map((sku) => (
+        <Tag key={sku.id}>SKU #{sku.id} {sku.name} ￥{yuan(sku.price_cent)} 库存 {sku.stock}</Tag>
+      )),
+    },
+    {
+      title: '操作',
+      render: (_, record) => (
+        <Space>
+          <Button onClick={() => setSelectedProduct(record)}>编辑首个 SKU</Button>
+          <Button onClick={() => productStatus(record.id, 'publish')}>上架</Button>
+          <Button danger onClick={() => productStatus(record.id, 'unpublish')}>下架</Button>
+        </Space>
+      ),
+    },
+  ]
+
+  const orderColumns: ColumnsType<Order> = [
+    { title: '订单', dataIndex: 'order_no', render: (value, record) => <span>{value}<br /><Text type="secondary">#{record.id}</Text></span> },
+    { title: '用户', dataIndex: 'user_id', render: (value) => `#${value}` },
+    { title: '金额', dataIndex: 'pay_amount_cent', render: (value) => `￥${yuan(value)}` },
+    { title: '状态', dataIndex: 'status', render: (status) => <StatusTag status={status} /> },
+    { title: '操作', render: (_, record) => <Button disabled={record.status !== 'pending_shipment'} onClick={() => shipOrder(record.id)}>发货</Button> },
+  ]
 
   return (
     <main className="admin-page">
-      <header className="page-header polished-header">
+      {contextHolder}
+      <section className="admin-hero">
         <div>
-          <p className="eyebrow">商家运营</p>
-          <h1>本店商品、订单和优惠券</h1>
-          <p>当前店铺 ID 由账号绑定，不能手动输入。分类由平台维护，商家创建商品时选择分类 ID。</p>
+          <Text className="eyebrow">商家运营</Text>
+          <Title level={1}>商品上传、订单发货与优惠券</Title>
+          <Paragraph>商家账号使用独立会话，可与平台账号同时登录。商品创建后直接上架，平台保留管理权。</Paragraph>
         </div>
-        <section className="status-card hero-status">
-          <h2>当前店铺</h2>
-          {profile ? (
-            <div className="info-list">
-              <span>{profile.real_name || profile.username}</span>
-              <span>角色：{statusText(profile.role)}</span>
-              <strong>店铺 ID：{merchantId ? `#${merchantId}` : '未绑定'}</strong>
-            </div>
-          ) : (
-            <Empty>未读取账号。请先登录商家账号。</Empty>
-          )}
-          <button onClick={loadMe}>刷新当前账号</button>
-        </section>
-      </header>
+        <Card>
+          <Space direction="vertical">
+            <Text strong>{profile?.real_name || profile?.username || '未登录商家账号'}</Text>
+            <Text>角色：{statusText(profile?.role)}</Text>
+            <Tag color="purple">店铺 ID：{merchantId ? `#${merchantId}` : '待平台审核'}</Tag>
+            <Button onClick={loadMe}>刷新商家状态</Button>
+          </Space>
+        </Card>
+      </section>
 
-      <div className="workbench-grid">
-        <Panel title="本店商品" description="创建商品、提交审核、上下架和维护首个 SKU。商品 ID、分类 ID、SKU ID 都在表格中直接显示。">
-          <div className="selected-panel">
-            <div>
-              <span className="id-badge">店铺 {merchantId ? `#${merchantId}` : '未绑定'}</span>
-              <h3>{selectedProduct ? `正在编辑：#${selectedProduct.id} ${selectedProduct.name}` : '创建新商品'}</h3>
-              <p>平台审核通过后商品才会对用户可见。</p>
-            </div>
-            <div className="category-grid compact-list">
-              {categories.map((category) => (
-                <button
-                  className={categoryId === String(category.id) ? 'category-chip active' : 'category-chip'}
-                  key={category.id}
-                  onClick={() => setCategoryId(String(category.id))}
-                >
-                  <strong>#{category.id}</strong>
-                  <span>{category.name}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="form-grid">
-            <label className="field">
-              <span>商品分类</span>
-              <select value={categoryId} onChange={(event) => setCategoryId(event.target.value)}>
-                <option value="">不选择分类</option>
-                {categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    #{category.id} {category.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <Field label="商品名称" value={productName} onChange={setProductName} />
-            <Field label="规格名称" value={skuName} onChange={setSkuName} />
-            <Field label="价格（元）" value={skuPriceYuan} onChange={setSkuPriceYuan} />
-            <Field label="库存" value={skuStock} onChange={setSkuStock} />
-            <TextArea label="商品描述" value={productDescription} onChange={setProductDescription} />
-          </div>
-          <div className="toolbar">
-            <button onClick={createProduct} disabled={!merchantId}>创建商品</button>
-            <button onClick={updateProduct} disabled={!selectedProduct}>保存选中商品</button>
-            <button onClick={updateSku} disabled={!selectedSku}>修改选中 SKU</button>
-            <Field label="批量商品 ID" value={batchProductIds} onChange={setBatchProductIds} />
-            <button onClick={() => batchAction('publish')}>批量上架</button>
-            <button onClick={() => batchAction('unpublish')}>批量下架</button>
-            <button onClick={loadProducts}>刷新商品</button>
-          </div>
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>商品 ID</th>
-                  <th>商品</th>
-                  <th>分类</th>
-                  <th>状态</th>
-                  <th>SKU 明细</th>
-                  <th>操作</th>
-                </tr>
-              </thead>
-              <tbody>
-                {products.map((product) => (
-                  <tr className={selectedProduct?.id === product.id ? 'selected-row' : ''} key={product.id}>
-                    <td><span className="id-badge">#{product.id}</span></td>
-                    <td>
-                      <button className="link-button" onClick={() => setSelectedProduct(product)}>
-                        {product.name}
-                      </button>
-                      <br />
-                      <small>{product.description || '暂无描述'}</small>
-                    </td>
-                    <td>#{product.category_id ?? '-'}</td>
-                    <td><span className="status-pill">{statusText(product.status)}</span></td>
-                    <td>
-                      {product.skus.map((sku) => (
-                        <div className="sku-line" key={sku.id}>
-                          <span>SKU #{sku.id}</span>
-                          <span>{sku.name}</span>
-                          <span>￥{yuan(sku.price_cent)}</span>
-                          <span>库存 {sku.stock}</span>
-                        </div>
-                      ))}
-                    </td>
-                    <td>
-                      <div className="button-row">
-                        <button onClick={() => productAction(product.id, 'submit')}>提交审核</button>
-                        <button onClick={() => productAction(product.id, 'publish')}>上架</button>
-                        <button onClick={() => productAction(product.id, 'unpublish')}>下架</button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {products.length === 0 ? <Empty>暂无本店商品。</Empty> : null}
-          </div>
-        </Panel>
+      <Row gutter={[24, 24]}>
+        <Col span={10}>
+          <Card title="上传商品">
+            <Form layout="vertical" onFinish={createProduct} initialValues={{ sku_name: '默认规格', price_yuan: 19.9, stock: 20 }}>
+              <Form.Item label="分类" name="category_id">
+                <Select
+                  allowClear
+                  options={categories.map((item) => ({ value: item.id, label: `#${item.id} ${item.name}` }))}
+                />
+              </Form.Item>
+              <Form.Item label="商品名称" name="name" rules={[{ required: true }]}>
+                <Input />
+              </Form.Item>
+              <Form.Item label="商品描述" name="description">
+                <Input.TextArea rows={3} />
+              </Form.Item>
+              <Form.Item label="商品图片">
+                <Upload fileList={uploadFiles} beforeUpload={(file) => uploadImage(file)} onRemove={(file) => {
+                  setImageUrls((items) => items.filter((item) => assetUrl(item) !== file.url))
+                  return true
+                }}>
+                  <Button>上传图片</Button>
+                </Upload>
+              </Form.Item>
+              <Row gutter={12}>
+                <Col span={8}><Form.Item label="SKU 名称" name="sku_name" rules={[{ required: true }]}><Input /></Form.Item></Col>
+                <Col span={8}><Form.Item label="价格（元）" name="price_yuan" rules={[{ required: true }]}><InputNumber min={0} precision={2} style={{ width: '100%' }} /></Form.Item></Col>
+                <Col span={8}><Form.Item label="库存" name="stock" rules={[{ required: true }]}><InputNumber min={0} style={{ width: '100%' }} /></Form.Item></Col>
+              </Row>
+              <Button type="primary" htmlType="submit" disabled={!merchantId}>创建并上架</Button>
+            </Form>
+          </Card>
+        </Col>
+        <Col span={14}>
+          <Card title="本店商品" extra={<Button onClick={loadProducts}>刷新</Button>}>
+            <Table rowKey="id" columns={productColumns} dataSource={products} pagination={{ pageSize: 6 }} />
+            {selectedProduct ? (
+              <Card size="small" title={`编辑商品 #${selectedProduct.id} 首个 SKU`}>
+                <Form layout="inline" onFinish={updateSelectedSku} initialValues={{
+                  price_yuan: Number(yuan(selectedProduct.skus[0]?.price_cent)),
+                  stock: selectedProduct.skus[0]?.stock,
+                }}>
+                  <Form.Item label="价格（元）" name="price_yuan"><InputNumber min={0} precision={2} /></Form.Item>
+                  <Form.Item label="库存" name="stock"><InputNumber min={0} /></Form.Item>
+                  <Button type="primary" htmlType="submit">保存</Button>
+                </Form>
+              </Card>
+            ) : null}
+          </Card>
+        </Col>
+        <Col span={24}>
+          <Card title="本店订单" extra={<Button onClick={loadOrders}>刷新订单</Button>}>
+            <Form layout="inline" form={shippingForm} initialValues={{ logistics_company: '商家配送', tracking_no: `NO${Date.now()}` }}>
+              <Form.Item label="物流公司" name="logistics_company"><Input /></Form.Item>
+              <Form.Item label="物流单号" name="tracking_no"><Input /></Form.Item>
+            </Form>
+            <Table rowKey="id" columns={orderColumns} dataSource={orders} pagination={{ pageSize: 8 }} />
+          </Card>
+        </Col>
+        <Col span={24}>
+          <Card title="本店优惠券">
+            <Form layout="inline" onFinish={createCoupon} initialValues={{ discount_yuan: 5, min_yuan: 20, total_quantity: 50 }}>
+              <Form.Item label="名称" name="name" rules={[{ required: true }]}><Input /></Form.Item>
+              <Form.Item label="优惠（元）" name="discount_yuan"><InputNumber min={0} precision={2} /></Form.Item>
+              <Form.Item label="门槛（元）" name="min_yuan"><InputNumber min={0} precision={2} /></Form.Item>
+              <Form.Item label="数量" name="total_quantity"><InputNumber min={1} /></Form.Item>
+              <Button type="primary" htmlType="submit" disabled={!merchantId}>创建优惠券</Button>
+              <Button onClick={loadCoupons}>刷新</Button>
+            </Form>
+            <Table
+              rowKey="id"
+              dataSource={coupons}
+              pagination={{ pageSize: 6 }}
+              columns={[
+                { title: '券 ID', dataIndex: 'id', render: (id) => <Tag>#{id}</Tag> },
+                { title: '名称', dataIndex: 'name' },
+                { title: '优惠', render: (_, record) => `满 ￥${yuan(record.min_amount_cent)} 减 ￥${yuan(record.discount_value)}` },
+                { title: '领取', render: (_, record) => `${record.claimed_quantity}/${record.total_quantity}` },
+                { title: '状态', dataIndex: 'status', render: (status) => <StatusTag status={status} /> },
+              ]}
+            />
+          </Card>
+        </Col>
+      </Row>
 
-        <Panel title="本店订单" description="商家处理自己店铺的订单发货。项目不实现物流轨迹查询，只记录物流公司和单号。">
-          <div className="toolbar">
-            <Field label="物流公司" value={shippingCompany} onChange={setShippingCompany} />
-            <Field label="物流单号" value={trackingNo} onChange={setTrackingNo} />
-            <button onClick={loadOrders}>刷新订单</button>
-            <button
-              onClick={() =>
-                run('导出本店订单 CSV', async () => ({
-                  preview: String(await http.get('/admin/orders/export', { responseType: 'text' })).slice(0, 800),
-                }))
-              }
-            >
-              导出 CSV
-            </button>
-          </div>
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>订单 ID</th>
-                  <th>订单号</th>
-                  <th>用户 ID</th>
-                  <th>金额</th>
-                  <th>状态</th>
-                  <th>操作</th>
-                </tr>
-              </thead>
-              <tbody>
-                {orders.map((order) => (
-                  <tr key={order.id}>
-                    <td><span className="id-badge">#{order.id}</span></td>
-                    <td>{order.order_no}</td>
-                    <td>#{order.user_id}</td>
-                    <td>￥{yuan(order.pay_amount_cent)}</td>
-                    <td><span className="status-pill">{statusText(order.status)}</span></td>
-                    <td><button onClick={() => shipOrder(order.id)}>发货</button></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {orders.length === 0 ? <Empty>暂无本店订单。</Empty> : null}
-          </div>
-        </Panel>
-
-        <Panel title="本店优惠券" description="商家只创建本店铺范围优惠券；范围自动绑定当前店铺 ID。">
-          <div className="form-grid">
-            <Field label="券名称" value={couponName} onChange={setCouponName} />
-            <Field label="优惠金额（元）" value={couponDiscountYuan} onChange={setCouponDiscountYuan} />
-            <Field label="门槛金额（元）" value={couponMinYuan} onChange={setCouponMinYuan} />
-            <Field label="发放总量" value={couponTotal} onChange={setCouponTotal} />
-            <button onClick={createCoupon} disabled={!merchantId}>创建本店券</button>
-            <button onClick={loadCoupons}>刷新优惠券</button>
-          </div>
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>模板 ID</th>
-                  <th>名称</th>
-                  <th>范围</th>
-                  <th>优惠</th>
-                  <th>领取</th>
-                  <th>状态</th>
-                  <th>操作</th>
-                </tr>
-              </thead>
-              <tbody>
-                {coupons.map((coupon) => (
-                  <tr key={coupon.id}>
-                    <td><span className="id-badge">#{coupon.id}</span></td>
-                    <td>{coupon.name}</td>
-                    <td>
-                      {coupon.scope_type}
-                      <br />
-                      <small>ID：{coupon.scope_ids?.join(', ') || '-'}</small>
-                    </td>
-                    <td>满 ￥{yuan(coupon.min_amount_cent)} 减 ￥{yuan(coupon.discount_value)}</td>
-                    <td>{coupon.claimed_quantity}/{coupon.total_quantity}</td>
-                    <td><span className="status-pill">{statusText(coupon.status)}</span></td>
-                    <td>
-                      <button
-                        onClick={async () => {
-                          await run('停用本店券', () => http.post(`/admin/promotions/coupons/${coupon.id}/disable`))
-                          await loadCoupons()
-                        }}
-                      >
-                        停用
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {coupons.length === 0 ? <Empty>暂无本店优惠券。</Empty> : null}
-          </div>
-        </Panel>
-      </div>
-
-      <ResultBoard result={lastResult} />
+      <DebugLogs logs={logs} />
     </main>
   )
 }

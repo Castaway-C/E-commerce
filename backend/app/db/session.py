@@ -27,6 +27,7 @@ async def init_db() -> None:
             await _patch_sqlite_points_log_columns(conn)
             await _patch_sqlite_admin_operation_log_columns(conn)
             await _patch_sqlite_merchant_application_columns(conn)
+            await _seed_default_categories(conn)
 
 
 async def _patch_sqlite_order_columns(conn) -> None:
@@ -116,3 +117,25 @@ async def _patch_sqlite_merchant_application_columns(conn) -> None:
     for column_name, column_type in columns.items():
         if column_name not in existing_columns:
             await conn.execute(text(f"ALTER TABLE merchant_application ADD COLUMN {column_name} {column_type}"))
+
+
+async def _seed_default_categories(conn) -> None:
+    default_categories = [
+        "食品生鲜",
+        "美妆个护",
+        "家居日用",
+        "数码家电",
+        "服饰鞋包",
+        "母婴用品",
+        "运动户外",
+        "图书文创",
+        "宠物生活",
+        "本地服务",
+    ]
+    for index, name in enumerate(default_categories, start=1):
+        result = await conn.execute(text("SELECT id FROM category WHERE name = :name LIMIT 1"), {"name": name})
+        if result.fetchone() is None:
+            await conn.execute(
+                text("INSERT INTO category (name, parent_id, sort_order, is_active) VALUES (:name, NULL, :sort_order, 1)"),
+                {"name": name, "sort_order": index * 10},
+            )

@@ -32,6 +32,10 @@ export const authService = {
     return http.get<unknown, { data: UserProfile }>('/users/profile')
   },
 
+  hasToken() {
+    return Boolean(localStorage.getItem('user_access_token'))
+  },
+
   async logout() {
     await http.post('/auth/logout')
     localStorage.removeItem('user_access_token')

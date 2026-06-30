@@ -8,7 +8,9 @@ export const http = axios.create({
 })
 
 http.interceptors.request.use((config) => {
-  const token = localStorage.getItem('admin_access_token')
+  const session = config.headers?.['X-Admin-Session'] === 'merchant' ? 'merchant' : 'platform'
+  delete config.headers?.['X-Admin-Session']
+  const token = localStorage.getItem(`${session}_admin_access_token`)
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }

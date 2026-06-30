@@ -79,8 +79,19 @@ export const orderService = {
     return http.post<unknown, { data: CartItem[] }>('/cart', payload)
   },
 
-  checkout() {
-    return http.post<unknown, { data: CheckoutResult }>('/cart/checkout', {})
+  updateCartItem(skuId: number, payload: { quantity: number; checked?: boolean }) {
+    return http.put<unknown, { data: CartItem[] }>(`/cart/${skuId}`, {
+      checked: true,
+      ...payload,
+    })
+  },
+
+  deleteCartItem(skuId: number) {
+    return http.delete<unknown, { data: CartItem[] }>(`/cart/${skuId}`)
+  },
+
+  checkout(payload: { coupon_id?: number | null } = {}) {
+    return http.post<unknown, { data: CheckoutResult }>('/cart/checkout', payload)
   },
 
   createOrder(payload: {

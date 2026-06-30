@@ -213,7 +213,7 @@
 
 ## POST `/orders/{id}/reviews`
 
-发表订单评价。当前阶段评价默认进入 `pending_audit`，管理端审核通过后才会公开展示。
+发表订单评价。当前阶段评价创建后默认 `published`，会直接公开展示；管理端保留兼容审核/隐藏能力。
 
 ## POST `/orders/{id}/refunds`
 
@@ -265,9 +265,9 @@
 - 发货后订单状态变为 `shipping`，并记录 `shipped_at`。
 - 按实现设计书 6.2，本项目不实现真实物流轨迹查询；`logistics_company` 和 `tracking_no` 只作为发货记录展示，用户端只做确认收货。
 
-## 管理端售后与评价接口
+## 管理端售后与评价管理接口
 
-- `POST /api/v1/admin/reviews/{review_id}/audit`：评价审核。
+- `POST /api/v1/admin/reviews/{review_id}/audit`：兼容旧审核接口；当前评价发布后默认公开，通过为 `published`，拒绝为 `hidden`，用于管理端隐藏不合适内容。
 - `GET /api/v1/admin/refunds`：售后列表。
 - `POST /api/v1/admin/refunds/{refund_id}/approve`：同意售后。
 - `POST /api/v1/admin/refunds/{refund_id}/reject`：拒绝售后。

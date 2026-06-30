@@ -16,7 +16,19 @@ export type ProductDetail = {
   id: number
   name: string
   description: string
-  skus: Array<{ id: number; name: string; price_cent: number; stock: number }>
+  cover_url?: string | null
+  category_id?: number | null
+  status: string
+  images: string[]
+  merchant: { id: number; name: string }
+  skus: Array<{ id: number; name: string; price_cent: number; market_price_cent?: number | null; stock: number }>
+}
+
+export type Category = {
+  id: number
+  name: string
+  parent_id?: number | null
+  sort_order: number
 }
 
 export type PageResult<T> = {
@@ -27,11 +39,15 @@ export type PageResult<T> = {
 }
 
 export const productService = {
-  listProducts() {
-    return http.get<unknown, { data: PageResult<ProductListItem> }>('/products')
+  listProducts(params?: { keyword?: string; category_id?: number }) {
+    return http.get<unknown, { data: PageResult<ProductListItem> }>('/products', { params })
   },
 
   getProduct(productId: number) {
     return http.get<unknown, { data: ProductDetail }>(`/products/${productId}`)
+  },
+
+  listCategories() {
+    return http.get<unknown, { data: Category[] }>('/categories')
   },
 }
