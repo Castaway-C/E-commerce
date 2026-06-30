@@ -1,6 +1,6 @@
 # 购物车与订单接口
 
-## 当前阶段实现范围
+## 当前实现范围
 
 - 已实现购物车增删改查、结算预校验、创建订单、订单列表/详情、取消待支付订单、支付单查询、模拟支付。
 - 创建订单会按商家拆分订单，并生成一个支付单。
@@ -8,9 +8,9 @@
 - 模拟支付成功后，支付单状态变为 `paid`，订单状态从 `pending_payment` 变为 `pending_shipment`。
 - 管理端发货需要填写 `logistics_company` 和 `tracking_no`，发货后订单状态变为 `shipping`。
 - 用户确认收货后订单状态变为 `completed`，并记录 `received_at`。
-- 当前基础版创建订单直接扣减 SKU 库存，并通过统一库存服务写入 `order_lock` 库存流水；取消或超时取消会回补库存并写入 `order_cancel_restore` 流水。
+- 当前创建订单直接扣减 SKU 库存，并通过统一库存服务写入 `order_lock` 库存流水；取消或超时取消会回补库存并写入 `order_cancel_restore` 流水。
 - 已提供支付超时取消、自动确认收货的 service 方法、Celery 任务入口和 Celery beat 定时配置。
-- Redis 预扣、积分抵扣等后续阶段再接入。
+- Redis 预扣、积分抵扣等属于后续全量开发任务，接入时必须同步更新前端页面、接口文档和测试。
 
 ## 购物车字段
 
@@ -176,7 +176,7 @@
 
 ## POST `/payments/{id}/pay`
 
-模拟支付。当前阶段不接第三方支付。
+模拟支付。当前不接第三方支付；如后续接入沙盒支付，需要同步补支付回调、幂等、前端状态展示和接口文档。
 
 ## POST `/orders/{id}/confirm`
 
@@ -213,13 +213,13 @@
 
 ## POST `/orders/{id}/reviews`
 
-发表订单评价。当前阶段评价创建后默认 `published`，会直接公开展示；管理端保留兼容审核/隐藏能力。
+发表订单评价。当前评价创建后默认 `published`，会直接公开展示；管理端保留兼容审核/隐藏能力。
 
 ## POST `/orders/{id}/refunds`
 
 申请退货退款。
 
-当前阶段售后状态支持：`pending_approval`、`approved`、`rejected`、`received`、`refunded`。
+当前售后状态支持：`pending_approval`、`approved`、`rejected`、`received`、`refunded`。
 
 请求：
 

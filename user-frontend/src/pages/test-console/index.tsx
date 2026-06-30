@@ -205,6 +205,19 @@ export function UserTestConsolePage() {
     return myCoupons.filter((coupon) => coupon.status === 'unused')
   }, [myCoupons])
 
+  const categoryTree = useMemo(() => {
+    const childrenByParent = new Map<number | null, Category[]>()
+    categories.forEach((category) => {
+      const parentId = category.parent_id ?? null
+      childrenByParent.set(parentId, [...(childrenByParent.get(parentId) ?? []), category])
+    })
+    childrenByParent.forEach((items) => items.sort((a, b) => a.sort_order - b.sort_order || a.id - b.id))
+    return (childrenByParent.get(null) ?? []).flatMap((parent) => [
+      { ...parent, label: parent.name },
+      ...(childrenByParent.get(parent.id) ?? []).map((child) => ({ ...child, label: `${parent.name} / ${child.name}` })),
+    ])
+  }, [categories])
+
   const cartTotal = cart.reduce((total, item) => total + item.price_cent * item.quantity, 0)
 
   async function run<T>(title: string, action: () => Promise<unknown>): Promise<T | null> {
@@ -234,6 +247,7 @@ export function UserTestConsolePage() {
     const data = await run('用户登录', () => authService.login({ account: mobile, password }))
     if (data) {
       await loadProfile()
+      await refreshUserData()
       api.success('用户已登录')
     }
   }
@@ -457,9 +471,36 @@ export function UserTestConsolePage() {
     return false
   }
 
+  async function refreshUserData() {
+    setSelectedAddressId(undefined)
+    setSelectedOrderId(undefined)
+    setPaymentId(undefined)
+    setSelectedUserCouponId(undefined)
+    setCheckoutPreview(null)
+    await Promise.all([loadCart(), loadOrders(), loadAddresses(), loadMyCoupons()])
+  }
+
+  async function logout() {
+    await run('用户登出', () => authService.logout())
+    setProfile(null)
+    setCart([])
+    setOrders([])
+    setAddresses([])
+    setMyCoupons([])
+    setSelectedAddressId(undefined)
+    setSelectedOrderId(undefined)
+    setPaymentId(undefined)
+    setSelectedUserCouponId(undefined)
+    setCheckoutPreview(null)
+    api.success('用户已退出登录')
+  }
+
+  useEffect(() => {
+    void loadProducts(categoryId)
+  }, [categoryId])
+
   useEffect(() => {
     void loadCategories()
-    void loadProducts()
     void loadCoupons()
     void loadPosts()
     void loadProfile()
@@ -506,6 +547,7 @@ export function UserTestConsolePage() {
               <Button type="primary" onClick={login}>登录</Button>
               <Button onClick={register}>注册并登录</Button>
               <Button onClick={loadProfile}>刷新用户</Button>
+              <Button danger disabled={!profile} onClick={logout}>退出登录</Button>
             </Space>
           </Space>
         </Card>
@@ -517,23 +559,17 @@ export function UserTestConsolePage() {
             <Space size={[12, 12]} wrap>
               <Button
                 type={categoryId === undefined ? 'primary' : 'default'}
-                onClick={() => {
-                  setCategoryId(undefined)
-                  void loadProducts(undefined)
-                }}
+                onClick={() => setCategoryId(undefined)}
               >
                 全部
               </Button>
-              {categories.map((category) => (
+              {categoryTree.map((category) => (
                 <Button
                   key={category.id}
                   type={categoryId === category.id ? 'primary' : 'default'}
-                  onClick={() => {
-                    setCategoryId(category.id)
-                    void loadProducts(category.id)
-                  }}
+                  onClick={() => setCategoryId(category.id)}
                 >
-                  {category.name}
+                  #{category.id} {category.label}
                 </Button>
               ))}
             </Space>

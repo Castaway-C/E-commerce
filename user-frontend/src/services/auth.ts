@@ -37,8 +37,11 @@ export const authService = {
   },
 
   async logout() {
-    await http.post('/auth/logout')
-    localStorage.removeItem('user_access_token')
-    localStorage.removeItem('user_refresh_token')
+    try {
+      await http.post('/auth/logout')
+    } finally {
+      localStorage.removeItem('user_access_token')
+      localStorage.removeItem('user_refresh_token')
+    }
   },
 }

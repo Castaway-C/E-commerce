@@ -26,6 +26,17 @@ export function AdminLoginPage() {
     }
   }
 
+  async function logout(session: 'platform' | 'merchant') {
+    try {
+      await adminAuthService.logout(session)
+      api.success(`${session === 'platform' ? '平台' : '商家'}账号已退出`)
+    } catch {
+      localStorage.removeItem(`${session}_admin_access_token`)
+      localStorage.removeItem(`${session}_admin_refresh_token`)
+      api.success(`${session === 'platform' ? '平台' : '商家'}本地登录状态已清除`)
+    }
+  }
+
   return (
     <main className="admin-page">
       {contextHolder}
@@ -49,6 +60,7 @@ export function AdminLoginPage() {
               <Space>
                 <Button type="primary" htmlType="submit">登录平台端</Button>
                 <Button onClick={() => navigate('/platform')}>进入平台页</Button>
+                <Button danger onClick={() => logout('platform')}>退出平台端</Button>
               </Space>
             </Form>
           </Card>
@@ -66,6 +78,7 @@ export function AdminLoginPage() {
                 <Button type="primary" htmlType="submit">登录商家端</Button>
                 <Button onClick={() => navigate('/merchant')}>进入商家页</Button>
                 <Button onClick={() => navigate('/merchant-apply')}>商家入驻</Button>
+                <Button danger onClick={() => logout('merchant')}>退出商家端</Button>
               </Space>
             </Form>
           </Card>
