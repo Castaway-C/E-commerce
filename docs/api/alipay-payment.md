@@ -39,7 +39,7 @@ Query parameter:
 
 | Name | Type | Required | Description |
 |---|---|---|---|
-| `force` | boolean | No | Default frontend behavior is `true`, which regenerates a QR code for an unpaid payment. Use this after changing sandbox gateway or keys, because old QR codes may belong to the previous sandbox environment. |
+| `force` | boolean | No | Frontend can use `true` when the user clicks “生成/刷新支付宝二维码”. The key requirement is to lock the button while the request is pending, so repeated clicks do not send concurrent precreate requests. |
 
 Response:
 
@@ -68,6 +68,8 @@ Response:
 ```
 
 Cross-shop rule: one cross-shop checkout creates one payment and multiple merchant orders. Generate only one QR code for the shared `payment_id`.
+
+Frontend rule: while this request is pending, disable the QR-code button and show a loading state. Do not fire repeated precreate requests for the same payment, because the first rendered QR code may become stale if later requests overwrite it.
 
 ## `POST /payments/{payment_id}/alipay/sync`
 

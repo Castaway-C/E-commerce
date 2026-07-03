@@ -198,7 +198,7 @@ export const orderService = {
     )
   },
 
-  precreateAlipay(paymentId: number, force = true) {
+  precreateAlipay(paymentId: number, force = false) {
     return http.post<unknown, { data: AlipayPrecreateResult }>(`/payments/${paymentId}/alipay/precreate`, undefined, {
       params: { force },
     })
@@ -212,7 +212,7 @@ export const orderService = {
     return http.get<unknown, { data: Payment }>(`/payments/${paymentId}`)
   },
 
-  listOrders(params?: { status?: string }) {
+  listOrders(params?: { status?: string; page?: number; page_size?: number }) {
     return http.get<unknown, { data: PageResult<Order> }>('/orders', { params })
   },
 

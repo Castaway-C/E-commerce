@@ -157,7 +157,8 @@ export function CommunityPage() {
         {alipayQrCode ? (
           <div>
             <QRCode value={alipayQrCode} size={180} />
-            <p>{alipayQrCode}</p>
+            <p>请使用支付宝沙箱买家账号扫码付款。二维码内容不是网页支付链接，直接打开不会进入该订单支付。</p>
+            <p>调试用订单码内容：{alipayQrCode}</p>
           </div>
         ) : null}
       </section>

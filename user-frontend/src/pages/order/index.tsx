@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Badge, Button, Card, Descriptions, Empty, Input, InputNumber, List, QRCode, Rate, Select, Space, Tag, Typography, message } from 'antd'
+import { Badge, Button, Card, Descriptions, Empty, Input, InputNumber, List, QRCode, Rate, Select, Space, Spin, Tag, Typography, message } from 'antd'
 
 import { orderService, type Order, type OrderItem, type Payment } from '../../services/order'
 import { getApiErrorMessage } from '../../services/http'
@@ -41,10 +41,18 @@ export function OrderPage() {
   const [refundQuantity, setRefundQuantity] = useState(1)
   const [refundReason, setRefundReason] = useState('不想要了')
   const [loading, setLoading] = useState(false)
+  const [paymentLoading, setPaymentLoading] = useState(false)
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(8)
+  const [total, setTotal] = useState(0)
+  const [generatingPaymentId, setGeneratingPaymentId] = useState<number>()
 
-  async function loadOrders() {
-    const response = await orderService.listOrders()
+  async function loadOrders(nextPage = page, nextPageSize = pageSize) {
+    const response = await orderService.listOrders({ page: nextPage, page_size: nextPageSize })
     setOrders(response.data.list)
+    setPage(response.data.page)
+    setPageSize(response.data.page_size)
+    setTotal(response.data.total)
   }
 
   useEffect(() => {
@@ -78,17 +86,20 @@ export function OrderPage() {
     setRefundItemId(order.items[0]?.id)
   }
 
-  async function createAlipay(paymentId: number) {
-    setLoading(true)
+  async function createAlipay(paymentId: number, force = false) {
+    if (paymentLoading) return
+    setPaymentLoading(true)
+    setGeneratingPaymentId(paymentId)
     try {
-      const response = await orderService.precreateAlipay(paymentId)
+      const response = await orderService.precreateAlipay(paymentId, force)
       setPayment(response.data.payment)
       setQrCode(response.data.qr_code)
-      message.success('支付宝二维码已生成')
+      message.success(force ? '支付宝二维码已强制刷新' : '支付宝二维码已生成')
     } catch (error) {
       message.error(`支付宝沙箱预创建失败：${getApiErrorMessage(error)}`)
     } finally {
-      setLoading(false)
+      setPaymentLoading(false)
+      setGeneratingPaymentId(undefined)
     }
   }
 
@@ -154,12 +165,24 @@ export function OrderPage() {
               <Descriptions.Item label="支付宝交易号">{payment.alipay_trade_no || '-'}</Descriptions.Item>
               <Descriptions.Item label="关联订单">{payment.order_ids?.map((id) => `#${id}`).join('、') || '-'}</Descriptions.Item>
             </Descriptions>
-            {qrCode ? (
-              <Space direction="vertical" style={{ marginTop: 16 }}>
-                <QRCode value={qrCode} size={180} />
-                <Text copyable>{qrCode}</Text>
-              </Space>
-            ) : null}
+            <Spin spinning={paymentLoading} tip="正在向支付宝沙箱生成二维码，请勿重复点击">
+              {qrCode ? (
+                <Space direction="vertical" style={{ marginTop: 16 }}>
+                  <QRCode value={qrCode} size={180} />
+                  <Text type="secondary">
+                    请使用支付宝沙箱买家账号扫码付款。二维码内容不是网页支付链接，直接在浏览器打开不会进入该订单支付。
+                  </Text>
+                  <Text type="secondary">
+                    生成期间按钮会锁定，避免多次点击导致前一个二维码过时。付款后点击“同步支付宝结果”。
+                  </Text>
+                  <Text copyable type="secondary">
+                    调试用订单码内容：{qrCode}
+                  </Text>
+                </Space>
+              ) : (
+                <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={paymentLoading ? '正在生成二维码' : '待生成二维码'} />
+              )}
+            </Spin>
           </Card>
         ) : null}
 
@@ -194,8 +217,8 @@ export function OrderPage() {
                   />
                   <Space wrap>
                     <Button onClick={() => showPayment(order.payment_id)}>查看支付单</Button>
-                    <Button type="primary" disabled={order.status !== 'pending_payment'} onClick={() => createAlipay(order.payment_id)}>
-                      支付宝扫码支付
+                    <Button type="primary" loading={paymentLoading && generatingPaymentId === order.payment_id} disabled={paymentLoading || order.status !== 'pending_payment'} onClick={() => createAlipay(order.payment_id, true)}>
+                      生成/刷新支付宝二维码
                     </Button>
                     <Button disabled={order.status !== 'pending_payment'} onClick={() => syncAlipay(order.payment_id)}>
                       同步支付宝结果
@@ -239,6 +262,17 @@ export function OrderPage() {
               </Card>
             </List.Item>
           )}
+          pagination={{
+            current: page,
+            pageSize,
+            total,
+            showSizeChanger: true,
+            pageSizeOptions: [5, 8, 12, 20],
+            showTotal: (count) => `共 ${count} 个订单`,
+            onChange: (nextPage, nextPageSize) => {
+              void loadOrders(nextPage, nextPageSize)
+            },
+          }}
         />
       </Space>
     </main>

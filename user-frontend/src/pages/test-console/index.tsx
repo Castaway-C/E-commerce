@@ -24,6 +24,7 @@ import {
   Segmented,
   Skeleton,
   Space,
+  Spin,
   Statistic,
   Tag,
   Typography,
@@ -274,9 +275,13 @@ export function UserTestConsolePage() {
   const [orders, setOrders] = useState<Order[]>([])
   const [selectedOrderId, setSelectedOrderId] = useState<number | undefined>()
   const [orderStatusFilter, setOrderStatusFilter] = useState<string | undefined>()
+  const [orderPage, setOrderPage] = useState(1)
+  const [orderPageSize, setOrderPageSize] = useState(6)
+  const [orderTotal, setOrderTotal] = useState(0)
   const [paymentId, setPaymentId] = useState<number | undefined>()
   const [paymentDetail, setPaymentDetail] = useState<Payment | null>(null)
   const [alipayQrCode, setAlipayQrCode] = useState('')
+  const [alipayLoading, setAlipayLoading] = useState(false)
   const [lastOrderResult, setLastOrderResult] = useState<{ payment_id?: number; order_ids?: number[]; pay_amount_cent?: number } | null>(null)
   const [refunds, setRefunds] = useState<Refund[]>([])
   const [refundStatusFilter, setRefundStatusFilter] = useState<string | undefined>()
@@ -968,13 +973,19 @@ export function UserTestConsolePage() {
     await loadMyCoupons()
   }
 
-  async function createAlipayQrCode() {
+  async function createAlipayQrCode(force = false) {
     if (!paymentId) return
-    const data = await run('支付宝扫码支付', () => orderService.precreateAlipay(paymentId))
-    if (data) {
-      const alipayData = data as AlipayPrecreateResult
-      setAlipayQrCode(alipayData.qr_code)
-      setPaymentDetail(alipayData.payment)
+    if (alipayLoading) return
+    setAlipayLoading(true)
+    try {
+      const data = await run('支付宝扫码支付', () => orderService.precreateAlipay(paymentId, force))
+      if (data) {
+        const alipayData = data as AlipayPrecreateResult
+        setAlipayQrCode(alipayData.qr_code)
+        setPaymentDetail(alipayData.payment)
+      }
+    } finally {
+      setAlipayLoading(false)
     }
   }
 
@@ -1011,10 +1022,15 @@ export function UserTestConsolePage() {
     await loadPaymentDetail(order.payment_id)
   }
 
-  async function loadOrders() {
+  async function loadOrders(nextPage = orderPage, nextPageSize = orderPageSize) {
     if (!authService.hasToken()) return
-    const data = await run<{ list?: Order[] }>('我的订单', () => orderService.listOrders({ status: orderStatusFilter }))
+    const data = await run<{ list?: Order[]; page?: number; page_size?: number; total?: number }>('我的订单', () =>
+      orderService.listOrders({ status: orderStatusFilter, page: nextPage, page_size: nextPageSize }),
+    )
     const list = data?.list ?? []
+    setOrderPage(data?.page ?? nextPage)
+    setOrderPageSize(data?.page_size ?? nextPageSize)
+    setOrderTotal(data?.total ?? list.length)
     setOrders(list)
     const currentOrder = selectedOrderId ? list.find((order) => order.id === selectedOrderId) : undefined
     if (!currentOrder && list[0]) {
@@ -1297,7 +1313,7 @@ export function UserTestConsolePage() {
   }, [])
 
   useEffect(() => {
-    void loadOrders()
+    void loadOrders(1, orderPageSize)
   }, [orderStatusFilter])
 
   useEffect(() => {
@@ -1326,7 +1342,7 @@ export function UserTestConsolePage() {
           <Space size={16} wrap>
             <Statistic title="商品" value={products.length} />
             <Statistic title="购物车件数" value={cart.reduce((total, item) => total + item.quantity, 0)} />
-            <Statistic title="订单" value={orders.length} />
+            <Statistic title="订单" value={orderTotal} />
           </Space>
         </div>
       </section>
@@ -2250,7 +2266,10 @@ export function UserTestConsolePage() {
                   style={{ width: 160 }}
                   placeholder="订单状态"
                   value={orderStatusFilter}
-                  onChange={setOrderStatusFilter}
+                  onChange={(value) => {
+                    setOrderStatusFilter(value)
+                    setOrderPage(1)
+                  }}
                   options={[
                     { value: 'pending_payment', label: '待支付' },
                     { value: 'group_pending', label: '待成团' },
@@ -2262,7 +2281,7 @@ export function UserTestConsolePage() {
                     { value: 'closed', label: '已关闭' },
                   ]}
                 />
-                <Button onClick={loadOrders}>刷新订单</Button>
+                <Button onClick={() => loadOrders(1, orderPageSize)}>刷新订单</Button>
               </Space>
             }
           >
@@ -2309,6 +2328,17 @@ export function UserTestConsolePage() {
                   </Card>
                 </List.Item>
               )}
+              pagination={{
+                current: orderPage,
+                pageSize: orderPageSize,
+                total: orderTotal,
+                showSizeChanger: true,
+                pageSizeOptions: [3, 6, 9, 12],
+                showTotal: (count) => `共 ${count} 个订单`,
+                onChange: (nextPage, nextPageSize) => {
+                  void loadOrders(nextPage, nextPageSize)
+                },
+              }}
             />
             <Divider />
             <Card
@@ -2390,10 +2420,15 @@ export function UserTestConsolePage() {
                     )}
 
                     <Space wrap>
-                      <Button type="primary" onClick={createAlipayQrCode} disabled={!paymentId || paymentDetail?.status === 'paid'}>
+                      <Button
+                        type="primary"
+                        loading={alipayLoading}
+                        onClick={() => createAlipayQrCode(true)}
+                        disabled={alipayLoading || !paymentId || paymentDetail?.status === 'paid'}
+                      >
                         生成/刷新支付宝二维码
                       </Button>
-                      <Button onClick={syncAlipayPayment} disabled={!paymentId}>
+                      <Button onClick={syncAlipayPayment} disabled={alipayLoading || !paymentId}>
                         同步支付宝结果
                       </Button>
                     </Space>
@@ -2401,15 +2436,19 @@ export function UserTestConsolePage() {
                 </Col>
                 <Col xs={24} lg={9}>
                   <Card size="small" className="payment-qr-card" title="支付宝扫码支付">
-                    {visibleAlipayQrCode ? (
-                      <Space direction="vertical" size={12} align="center" style={{ width: '100%' }}>
-                        <QRCode value={visibleAlipayQrCode} size={210} />
-                        <Text type="secondary">请使用支付宝沙箱买家账号扫码付款，付款后点击“同步支付宝结果”。</Text>
-                        <Text copyable className="qr-link">{visibleAlipayQrCode}</Text>
-                      </Space>
-                    ) : (
-                      <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="待生成二维码" />
-                    )}
+                    <Spin spinning={alipayLoading} tip="正在生成支付宝二维码，请勿重复点击">
+                      {visibleAlipayQrCode ? (
+                        <Space direction="vertical" size={12} align="center" style={{ width: '100%' }}>
+                          <QRCode value={visibleAlipayQrCode} size={210} />
+                          <Text type="secondary">请使用支付宝沙箱买家账号扫码付款，付款后点击“同步支付宝结果”。</Text>
+                          <Text type="secondary">生成期间按钮会锁定，避免多个二维码请求排队导致前一个二维码过时。</Text>
+                          <Text type="secondary">二维码内容不是网页支付链接，直接在浏览器打开不会进入该订单支付。</Text>
+                          <Text copyable className="qr-link">调试用订单码内容：{visibleAlipayQrCode}</Text>
+                        </Space>
+                      ) : (
+                        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={alipayLoading ? '正在生成二维码' : '待生成二维码'} />
+                      )}
+                    </Spin>
                   </Card>
                 </Col>
               </Row>
