@@ -2,13 +2,11 @@ import {
   Avatar,
   Button,
   Card,
-  Col,
   Empty,
   Image,
   InputNumber,
   List,
   Rate,
-  Row,
   Select,
   Skeleton,
   Space,
@@ -16,6 +14,12 @@ import {
   Typography,
   message,
 } from 'antd'
+import {
+  HeartFilled,
+  HeartOutlined,
+  ShoppingCartOutlined,
+  ArrowLeftOutlined,
+} from '@ant-design/icons'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { authService } from '../../services/auth'
@@ -50,6 +54,7 @@ export function ProductDetailPage() {
   const [quantity, setQuantity] = useState(1)
   const [favoriteStatus, setFavoriteStatus] = useState<ProductFavoriteStatus | null>(null)
   const [loading, setLoading] = useState(false)
+  const [activeImageIndex, setActiveImageIndex] = useState(0)
 
   const selectedSku = useMemo(() => {
     return product?.skus.find((sku) => sku.id === selectedSkuId) ?? product?.skus[0]
@@ -82,6 +87,7 @@ export function ProductDetailPage() {
         setProduct(data)
         setSelectedSkuId(data.skus[0]?.id)
         setFavoriteStatus(statusResponse ? (statusResponse.data as ProductFavoriteStatus) : null)
+        setActiveImageIndex(0)
         await loadProductReviews(data.id)
       } else {
         setProduct(null)
@@ -157,122 +163,185 @@ export function ProductDetailPage() {
 
   if (!Number.isFinite(productId)) {
     return (
-      <main style={{ padding: 16 }}>
+      <div className="detail-page">
         <Empty description="商品 ID 无效">
           <Link to="/products">返回商品列表</Link>
         </Empty>
-      </main>
+      </div>
     )
   }
 
   return (
-    <main style={{ padding: 16 }}>
-      <Space direction="vertical" size={16} style={{ width: '100%' }}>
-        <Link to="/products">← 返回商品列表</Link>
+    <div className="detail-page">
+      {/* ── Breadcrumb ── */}
+      <div className="detail-breadcrumb">
+        <Link to="/products"><ArrowLeftOutlined /> 返回商品列表</Link>
+      </div>
 
-        <Skeleton loading={loading} active>
-          {product ? (
-            <>
-              <Row gutter={[24, 24]}>
-                <Col span={11}>
-                  {productImages[0] ? (
+      <Skeleton loading={loading} active paragraph={{ rows: 8 }}>
+        {product ? (
+          <>
+            {/* ── Product Hero: Image + Info ── */}
+            <div className="detail-hero">
+              {/* Left: Image Gallery */}
+              <div className="detail-gallery">
+                <div className="detail-main-image">
+                  {productImages[activeImageIndex] ? (
                     <Image
-                      src={absoluteAssetUrl(productImages[0])}
+                      src={absoluteAssetUrl(productImages[activeImageIndex])}
                       fallback=""
                       preview={false}
-                      style={{ width: '100%', maxHeight: 360, objectFit: 'cover' }}
+                      className="detail-main-image-img"
                     />
                   ) : (
-                    <div style={{ width: '100%', height: 360, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fafafa' }}>
-                      <Text type="secondary">商品图片</Text>
+                    <div className="detail-image-placeholder">
+                      <Text type="secondary">暂无图片</Text>
                     </div>
                   )}
-                  {productImages.length ? (
-                    <Image.PreviewGroup>
-                      <Space wrap style={{ marginTop: 12 }}>
-                        {productImages.map((url, index) => (
-                          <Image
-                            key={`${url}-${index}`}
-                            width={84}
-                            height={84}
-                            src={absoluteAssetUrl(url)}
-                            style={{ objectFit: 'cover' }}
-                          />
-                        ))}
-                      </Space>
-                    </Image.PreviewGroup>
-                  ) : null}
-                </Col>
-                <Col span={13}>
-                  <Space direction="vertical" size={16} style={{ width: '100%' }}>
-                    <Space wrap>
-                      <Tag color="blue">商品 #{product.id}</Tag>
-                      <Link to={`/merchants/${product.merchant.id}`}>
-                        <Tag color="purple">店铺 #{product.merchant.id} {product.merchant.name}</Tag>
-                      </Link>
-                      <Tag>分类 #{product.category_id ?? '-'}</Tag>
-                      <Tag color="gold">
-                        {product.review_summary.average_score ?? '-'} 分 / {product.review_summary.count} 评
-                      </Tag>
-                    </Space>
-                    <Title level={3} style={{ margin: 0 }}>{product.name}</Title>
-                    <Space size={12} align="baseline">
-                      <Text style={{ color: '#f50', fontSize: 28 }}>￥{yuan(selectedSku?.price_cent)}</Text>
-                      {selectedSku?.market_price_cent ? (
-                        <Text delete type="secondary">￥{yuan(selectedSku.market_price_cent)}</Text>
-                      ) : null}
-                    </Space>
-                    <div>
-                      <Text type="secondary">选择规格</Text>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
-                        {product.skus.map((sku) => (
-                          <Button
-                            key={sku.id}
-                            type={selectedSkuId === sku.id ? 'primary' : 'default'}
-                            onClick={() => setSelectedSkuId(sku.id)}
-                            disabled={sku.stock <= 0}
-                          >
-                            {sku.name} / SKU #{sku.id} / 库存 {sku.stock}
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
-                    <Space>
-                      <Text type="secondary">购买数量</Text>
-                      <InputNumber min={1} value={quantity} onChange={(value) => setQuantity(Number(value) || 1)} />
-                    </Space>
-                    <Space wrap>
-                      <Button type="primary" size="large" onClick={addCart} disabled={!selectedSku || selectedSku.stock <= 0}>
-                        加入购物车
-                      </Button>
-                      <Button size="large" onClick={toggleFavorite}>
-                        {favoriteStatus?.favorited ? '已收藏，点击取消' : '收藏商品'}
-                      </Button>
-                      <Tag color="magenta">收藏 {favoriteStatus?.favorite_count ?? 0}</Tag>
-                    </Space>
-                  </Space>
-                </Col>
-              </Row>
-
-              <Card size="small" title="图文详情">
-                <Paragraph style={{ whiteSpace: 'pre-line' }}>{product.description || '暂无描述'}</Paragraph>
-                {productImages.length ? (
-                  <Space direction="vertical" size={12} style={{ width: '100%' }}>
+                </div>
+                {productImages.length > 1 && (
+                  <div className="detail-thumb-list">
                     {productImages.map((url, index) => (
-                      <Image key={`${url}-content-${index}`} src={absoluteAssetUrl(url)} style={{ width: '100%' }} />
+                      <div
+                        key={`${url}-${index}`}
+                        className={`detail-thumb ${index === activeImageIndex ? 'detail-thumb-active' : ''}`}
+                        onClick={() => setActiveImageIndex(index)}
+                      >
+                        <img src={absoluteAssetUrl(url)} alt={`缩略图 ${index + 1}`} />
+                      </div>
                     ))}
-                  </Space>
-                ) : null}
+                  </div>
+                )}
+              </div>
+
+              {/* Right: Product Info */}
+              <div className="detail-info">
+                {/* Title + Tags */}
+                <div className="detail-title-row">
+                  <h1 className="detail-title">{product.name}</h1>
+                  <div className="detail-tags">
+                    <Tag className="detail-tag-id">#{product.id}</Tag>
+                    <Link to={`/merchants/${product.merchant.id}`}>
+                      <Tag className="detail-tag-merchant">{product.merchant.name}</Tag>
+                    </Link>
+                    {product.category_id ? (
+                      <Tag className="detail-tag-cat">分类 #{product.category_id}</Tag>
+                    ) : null}
+                  </div>
+                </div>
+
+                {/* Price Block */}
+                <div className="detail-price-block">
+                  <div className="detail-price-row">
+                    <span className="detail-price-label">价格</span>
+                    <span className="detail-price">¥{yuan(selectedSku?.price_cent)}</span>
+                    {selectedSku?.market_price_cent ? (
+                      <span className="detail-market-price">¥{yuan(selectedSku.market_price_cent)}</span>
+                    ) : null}
+                  </div>
+                  <div className="detail-review-brief">
+                    <Rate disabled value={product.review_summary.average_score ?? 0} allowHalf className="detail-rate-sm" />
+                    <span className="detail-review-score">{product.review_summary.average_score ?? '-'}</span>
+                    <span className="detail-review-count">{product.review_summary.count} 条评价</span>
+                    <span className="detail-fav-count">
+                      {favoriteStatus?.favorited ? <HeartFilled style={{ color: '#f5222d' }} /> : <HeartOutlined />}
+                      {' '}{favoriteStatus?.favorite_count ?? 0} 收藏
+                    </span>
+                  </div>
+                </div>
+
+                {/* SKU Selection */}
+                <div className="detail-sku-section">
+                  <Text type="secondary" className="detail-section-label">规格</Text>
+                  <div className="detail-sku-grid">
+                    {product.skus.map((sku) => (
+                      <Button
+                        key={sku.id}
+                        type={selectedSkuId === sku.id ? 'primary' : 'default'}
+                        onClick={() => setSelectedSkuId(sku.id)}
+                        disabled={sku.stock <= 0}
+                        className={`detail-sku-btn ${selectedSkuId === sku.id ? 'detail-sku-btn-active' : ''}`}
+                      >
+                        {sku.name}
+                        {sku.stock <= 0 && <span className="detail-sku-oos">缺货</span>}
+                      </Button>
+                    ))}
+                  </div>
+                  {selectedSku && (
+                    <Text type="secondary" className="detail-sku-stock">
+                      SKU #{selectedSku.id} · 库存 {selectedSku.stock} 件
+                    </Text>
+                  )}
+                </div>
+
+                {/* Quantity */}
+                <div className="detail-qty-section">
+                  <Text type="secondary" className="detail-section-label">数量</Text>
+                  <InputNumber
+                    min={1}
+                    max={selectedSku?.stock ?? 99}
+                    value={quantity}
+                    onChange={(value) => setQuantity(Number(value) || 1)}
+                    className="detail-qty-input"
+                  />
+                </div>
+
+                {/* Action Buttons */}
+                <div className="detail-actions">
+                  <Button
+                    type="primary"
+                    size="large"
+                    icon={<ShoppingCartOutlined />}
+                    onClick={addCart}
+                    disabled={!selectedSku || selectedSku.stock <= 0}
+                    className="btn-add-cart"
+                  >
+                    加入购物车
+                  </Button>
+                  <Button
+                    size="large"
+                    onClick={toggleFavorite}
+                    icon={favoriteStatus?.favorited ? <HeartFilled /> : <HeartOutlined />}
+                    className="btn-toggle-fav"
+                  >
+                    {favoriteStatus?.favorited ? '已收藏' : '收藏'}
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            {/* ── Tabs: Description + Reviews ── */}
+            <div className="detail-tabs">
+              {/* Description Tab */}
+              <Card
+                className="detail-tab-card"
+                title={<span className="detail-tab-title">图文详情</span>}
+              >
+                <Paragraph style={{ whiteSpace: 'pre-line' }}>{product.description || '暂无描述'}</Paragraph>
+                {productImages.length > 0 && (
+                  <div className="detail-content-images">
+                    <Image.PreviewGroup>
+                      {productImages.map((url, index) => (
+                        <Image
+                          key={`${url}-content-${index}`}
+                          src={absoluteAssetUrl(url)}
+                          className="detail-content-image"
+                        />
+                      ))}
+                    </Image.PreviewGroup>
+                  </div>
+                )}
               </Card>
 
+              {/* Reviews Tab */}
               <Card
-                size="small"
-                title="评价区"
+                className="detail-tab-card"
+                title={<span className="detail-tab-title">商品评价</span>}
                 extra={
-                  <Space wrap>
+                  <Space wrap size={8}>
                     <Select
                       allowClear
-                      style={{ width: 120 }}
+                      style={{ width: 110 }}
                       placeholder="评分筛选"
                       value={reviewFilterScore}
                       onChange={setReviewFilterScore}
@@ -280,63 +349,60 @@ export function ProductDetailPage() {
                     />
                     <Button
                       type={reviewOnlyWithImage ? 'primary' : 'default'}
-                      onClick={() => setReviewOnlyWithImage((value) => !value)}
+                      onClick={() => setReviewOnlyWithImage((v) => !v)}
+                      size="small"
                     >
                       只看有图
                     </Button>
-                    {product ? (
-                      <Button size="small" onClick={() => loadProductReviews(product.id)}>刷新评价</Button>
-                    ) : null}
+                    <Button size="small" onClick={() => loadProductReviews(product.id)}>刷新</Button>
                   </Space>
                 }
               >
-                <Space direction="vertical" style={{ width: '100%' }}>
-                  <Space wrap>
-                    <Tag color="gold">
-                      平均 {product.review_summary.average_score ?? '-'} 分
-                    </Tag>
-                    <Tag>共 {product.review_summary.count} 条评价</Tag>
-                  </Space>
-                  <List
-                    size="small"
-                    dataSource={reviews}
-                    locale={{ emptyText: '暂无公开评价' }}
-                    renderItem={(review) => (
-                      <List.Item>
-                        <Space direction="vertical" size={6} style={{ width: '100%' }}>
-                          <Space wrap>
-                            <Rate disabled value={review.score} />
-                            <Space size={6}>
-                              <Avatar size="small" src={absoluteAssetUrl(review.user_avatar_url)}>
-                                {review.user_nickname?.[0] ?? '用'}
-                              </Avatar>
-                              <Text type="secondary">{review.user_nickname || `用户 #${review.user_id}`}</Text>
-                            </Space>
+                <List
+                  size="small"
+                  dataSource={reviews}
+                  locale={{ emptyText: '暂无公开评价' }}
+                  renderItem={(review) => (
+                    <List.Item className="detail-review-item">
+                      <div className="detail-review">
+                        <div className="detail-review-header">
+                          <Space size={8}>
+                            <Avatar size="small" src={absoluteAssetUrl(review.user_avatar_url)}>
+                              {review.user_nickname?.[0] ?? '用'}
+                            </Avatar>
+                            <Text type="secondary">{review.user_nickname || `用户 #${review.user_id}`}</Text>
                           </Space>
-                          <Text>{review.content || '用户未填写文字评价'}</Text>
-                          {review.image_urls.length ? (
-                            <Image.PreviewGroup>
-                              <Space wrap>
-                                {review.image_urls.map((url) => (
-                                  <Image key={url} width={72} height={72} src={absoluteAssetUrl(url)} />
-                                ))}
-                              </Space>
-                            </Image.PreviewGroup>
-                          ) : null}
-                        </Space>
-                      </List.Item>
-                    )}
-                  />
-                </Space>
+                          <Rate disabled value={review.score} className="detail-rate-sm" />
+                        </div>
+                        <Text className="detail-review-content">{review.content || '用户未填写文字评价'}</Text>
+                        {review.image_urls.length > 0 && (
+                          <Image.PreviewGroup>
+                            <div className="detail-review-images">
+                              {review.image_urls.map((url) => (
+                                <Image
+                                  key={url}
+                                  width={80}
+                                  height={80}
+                                  src={absoluteAssetUrl(url)}
+                                  className="detail-review-thumb"
+                                />
+                              ))}
+                            </div>
+                          </Image.PreviewGroup>
+                        )}
+                      </div>
+                    </List.Item>
+                  )}
+                />
               </Card>
-            </>
-          ) : (
-            <Empty description="商品不存在或已下架">
-              <Link to="/products">返回商品列表</Link>
-            </Empty>
-          )}
-        </Skeleton>
-      </Space>
-    </main>
+            </div>
+          </>
+        ) : (
+          <Empty description="商品不存在或已下架">
+            <Link to="/products">返回商品列表</Link>
+          </Empty>
+        )}
+      </Skeleton>
+    </div>
   )
 }
