@@ -1,55 +1,119 @@
-import { FormEvent, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
+import { Alert, Button, Card, Col, Empty, Form, Input, Popconfirm, Row, Space, Switch, Tag, Typography } from 'antd'
 
-import { addressService, type Address } from '../../services/address'
+import { addressService, type Address, type AddressPayload } from '../../services/address'
+import { authService } from '../../services/auth'
+import { pickErrorMessage } from '../../utils/format'
 
-const initialForm = {
-  receiver_name: '',
-  receiver_mobile: '',
-  province: '',
-  city: '',
-  district: '',
-  detail_address: '',
-  is_default: false,
+const { Title, Text, Paragraph } = Typography
+
+type AddressFormValues = {
+  receiver_name: string
+  receiver_mobile: string
+  province: string
+  city: string
+  district?: string
+  street?: string
+  detail_address: string
+  postal_code?: string
+  address_tag?: string
+  is_default?: boolean
+}
+
+function buildAddressText(address: Address) {
+  return [address.province, address.city, address.district ?? '', address.street ?? '', address.detail_address]
+    .filter(Boolean)
+    .join(' ')
 }
 
 export function AddressPage() {
   const [addresses, setAddresses] = useState<Address[]>([])
-  const [form, setForm] = useState(initialForm)
+  const [form] = Form.useForm<AddressFormValues>()
+  const [editingAddressId, setEditingAddressId] = useState<number | undefined>()
   const [message, setMessage] = useState('')
 
   async function loadAddresses() {
-    const response = await addressService.listAddresses()
-    setAddresses(response.data)
+    if (!authService.hasToken()) {
+      setAddresses([])
+      return
+    }
+    try {
+      const response = await addressService.listAddresses()
+      setAddresses(response.data ?? [])
+    } catch (error) {
+      setMessage(`加载地址失败：${pickErrorMessage(error) ?? '请求失败'}`)
+      setAddresses([])
+    }
   }
 
   useEffect(() => {
-    loadAddresses().catch(() => setAddresses([]))
+    void loadAddresses()
   }, [])
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    setMessage('')
+  function resetForm() {
+    setEditingAddressId(undefined)
+    form.resetFields()
+  }
+
+  async function handleSubmit() {
+    let values: AddressFormValues
     try {
-      await addressService.createAddress({
-        ...form,
-        district: form.district || null,
-      })
-      setForm(initialForm)
-      await loadAddresses()
-      setMessage('地址已保存')
+      values = await form.validateFields()
     } catch {
-      setMessage('保存地址失败，请检查登录状态和表单内容')
+      return
     }
+    setMessage('')
+    const payload: AddressPayload = {
+      receiver_name: values.receiver_name,
+      receiver_mobile: values.receiver_mobile,
+      province: values.province,
+      city: values.city,
+      district: values.district || null,
+      street: values.street || null,
+      detail_address: values.detail_address,
+      postal_code: values.postal_code || null,
+      address_tag: values.address_tag || null,
+      is_default: values.is_default ?? (addresses.length === 0),
+    }
+    try {
+      if (editingAddressId) {
+        await addressService.updateAddress(editingAddressId, payload)
+        setMessage('地址已修改')
+      } else {
+        await addressService.createAddress(payload)
+        setMessage('地址已保存')
+      }
+      resetForm()
+      await loadAddresses()
+    } catch (error) {
+      setMessage(`保存地址失败：${pickErrorMessage(error) ?? '请求失败'}`)
+    }
+  }
+
+  function handleEdit(address: Address) {
+    setEditingAddressId(address.id)
+    form.setFieldsValue({
+      receiver_name: address.receiver_name,
+      receiver_mobile: address.receiver_mobile,
+      province: address.province,
+      city: address.city,
+      district: address.district ?? '',
+      street: address.street ?? '',
+      detail_address: address.detail_address,
+      postal_code: address.postal_code ?? '',
+      address_tag: address.address_tag ?? '',
+      is_default: address.is_default,
+    })
   }
 
   async function handleSetDefault(addressId: number) {
     setMessage('')
     try {
       await addressService.updateAddress(addressId, { is_default: true })
-      await loadAddresses()
       setMessage('默认地址已更新')
-    } catch {
-      setMessage('设置默认地址失败')
+      await loadAddresses()
+    } catch (error) {
+      setMessage(`设置默认地址失败：${pickErrorMessage(error) ?? '请求失败'}`)
     }
   }
 
@@ -57,85 +121,154 @@ export function AddressPage() {
     setMessage('')
     try {
       await addressService.deleteAddress(addressId)
-      await loadAddresses()
       setMessage('地址已删除')
-    } catch {
-      setMessage('删除地址失败')
+      if (editingAddressId === addressId) {
+        resetForm()
+      }
+      await loadAddresses()
+    } catch (error) {
+      setMessage(`删除地址失败：${pickErrorMessage(error) ?? '请求失败'}`)
     }
   }
 
   return (
-    <main>
-      <h1>收货地址</h1>
-      <form onSubmit={handleSubmit}>
-        <label>
-          收货人
-          <input
-            value={form.receiver_name}
-            onChange={(event) => setForm({ ...form, receiver_name: event.target.value })}
-          />
-        </label>
-        <label>
-          手机号
-          <input
-            value={form.receiver_mobile}
-            onChange={(event) => setForm({ ...form, receiver_mobile: event.target.value })}
-          />
-        </label>
-        <label>
-          省
-          <input value={form.province} onChange={(event) => setForm({ ...form, province: event.target.value })} />
-        </label>
-        <label>
-          市
-          <input value={form.city} onChange={(event) => setForm({ ...form, city: event.target.value })} />
-        </label>
-        <label>
-          区县
-          <input value={form.district} onChange={(event) => setForm({ ...form, district: event.target.value })} />
-        </label>
-        <label>
-          详细地址
-          <input
-            value={form.detail_address}
-            onChange={(event) => setForm({ ...form, detail_address: event.target.value })}
-          />
-        </label>
-        <label>
-          <input
-            type="checkbox"
-            checked={form.is_default}
-            onChange={(event) => setForm({ ...form, is_default: event.target.checked })}
-          />
-          设为默认
-        </label>
-        <button type="submit">保存地址</button>
-      </form>
+    <main className="page-shell">
+      <Title level={2}>收货地址</Title>
 
-      <section>
-        <h2>地址列表</h2>
-        {addresses.length > 0 ? (
-          <ul>
-            {addresses.map((address) => (
-              <li key={address.id}>
-                #{address.id} {address.receiver_name} {address.receiver_mobile} - {address.province}
-                {address.city}
-                {address.district ?? ''}
-                {address.detail_address} {address.is_default ? '默认' : ''}
-                <button type="button" onClick={() => handleSetDefault(address.id)}>
-                  设为默认
-                </button>
-                <button type="button" onClick={() => handleDelete(address.id)}>
-                  删除
-                </button>
-              </li>
-            ))}
-          </ul>
+      {message && (
+        <Alert
+          style={{ maxWidth: 960, marginBottom: 16 }}
+          showIcon
+          type="info"
+          message={message}
+          onClose={() => setMessage('')}
+          closable
+        />
+      )}
+
+      <Card
+        title={editingAddressId ? `编辑地址 #${editingAddressId}` : '新增地址'}
+        style={{ maxWidth: 960, marginBottom: 24 }}
+        extra={editingAddressId ? <Button onClick={resetForm}>取消编辑</Button> : undefined}
+      >
+        <Form form={form} layout="vertical">
+          <Row gutter={16}>
+            <Col xs={24} sm={12}>
+              <Form.Item name="receiver_name" label="收货人" rules={[{ required: true, message: '请输入收货人姓名' }]}>
+                <Input placeholder="收货人姓名" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12}>
+              <Form.Item name="receiver_mobile" label="手机号" rules={[{ required: true, message: '请输入收货人手机号' }]}>
+                <Input placeholder="收货人手机号" />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={16}>
+            <Col xs={24} sm={8}>
+              <Form.Item name="province" label="省" rules={[{ required: true, message: '请输入省' }]}>
+                <Input placeholder="例如：广东省" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={8}>
+              <Form.Item name="city" label="市" rules={[{ required: true, message: '请输入市' }]}>
+                <Input placeholder="例如：广州市" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={8}>
+              <Form.Item name="district" label="区县">
+                <Input placeholder="例如：天河区" />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={16}>
+            <Col xs={24} sm={12}>
+              <Form.Item name="street" label="街道">
+                <Input placeholder="街道/乡镇" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={6}>
+              <Form.Item name="postal_code" label="邮政编码">
+                <Input placeholder="邮政编码" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={6}>
+              <Form.Item name="address_tag" label="地址标签">
+                <Input placeholder="例如：家、公司" />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Form.Item name="detail_address" label="详细地址" rules={[{ required: true, message: '请输入详细地址' }]}>
+            <Input.TextArea placeholder="楼栋、门牌等详细地址" autoSize={{ minRows: 2, maxRows: 4 }} />
+          </Form.Item>
+          <Form.Item name="is_default" valuePropName="checked">
+            <Switch checkedChildren="默认地址" unCheckedChildren="非默认" />
+          </Form.Item>
+          <Space>
+            <Button type="primary" onClick={handleSubmit}>
+              {editingAddressId ? '保存修改' : '保存地址'}
+            </Button>
+            <Button onClick={resetForm}>重置</Button>
+          </Space>
+        </Form>
+      </Card>
+
+      <Card title="地址列表" style={{ maxWidth: 960 }}>
+        {addresses.length === 0 ? (
+          <Empty description="暂无收货地址" />
         ) : (
-          <p>暂无地址</p>
+          <Row gutter={[16, 16]}>
+            {addresses.map((address) => (
+              <Col xs={24} md={12} key={address.id}>
+                <Card
+                  size="small"
+                  title={
+                    <Space>
+                      <Text strong>#{address.id}</Text>
+                      <Text strong>{address.receiver_name}</Text>
+                      <Text type="secondary">{address.receiver_mobile}</Text>
+                      {address.is_default && <Tag color="green">默认</Tag>}
+                      {address.address_tag && <Tag color="blue">{address.address_tag}</Tag>}
+                    </Space>
+                  }
+                  actions={[
+                    <Button
+                      key="default"
+                      type="link"
+                      size="small"
+                      disabled={address.is_default}
+                      onClick={() => handleSetDefault(address.id)}
+                    >
+                      设为默认
+                    </Button>,
+                    <Button key="edit" type="link" size="small" onClick={() => handleEdit(address)}>
+                      编辑
+                    </Button>,
+                    <Popconfirm
+                      key="delete"
+                      title="确认删除该地址？"
+                      onConfirm={() => handleDelete(address.id)}
+                      okText="删除"
+                      cancelText="取消"
+                    >
+                      <Button type="link" size="small" danger>
+                        删除
+                      </Button>
+                    </Popconfirm>,
+                  ]}
+                >
+                  <Paragraph style={{ marginBottom: 4 }}>{buildAddressText(address)}</Paragraph>
+                  {address.postal_code && (
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      邮编：{address.postal_code}
+                    </Text>
+                  )}
+                </Card>
+              </Col>
+            ))}
+          </Row>
         )}
-      </section>
-      {message && <p>{message}</p>}
+      </Card>
     </main>
   )
 }

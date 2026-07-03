@@ -1,0 +1,114 @@
+<h2>首页重构方向：你想要哪种？</h2>
+<p class="subtitle">当前首页是"8 个快捷入口卡片"，没有真实商品/促销/种草内容，确实不像商城。下面是 3 种重构方向，请选一个最接近你想要的。</p>
+
+<div class="cards">
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:16px;background:#f8fafc">
+      <div style="font-weight:800;font-size:13px;margin-bottom:8px;color:#4338ca">方向 A：商城主导</div>
+      <div class="mock-nav" style="font-size:11px;padding:6px 8px">🔍 搜索框 &nbsp;|&nbsp; 商品 拼团 优惠券 社区</div>
+      <div style="background:linear-gradient(120deg,#1e293b,#4f46e5);color:#fff;font-size:11px;padding:10px;margin:6px 0;border-radius:4px">Hero: 平台主推 / 当季活动 banner</div>
+      <div style="display:flex;gap:4px;margin:6px 0">
+        <div class="placeholder" style="flex:1;font-size:10px;padding:6px">分类①</div>
+        <div class="placeholder" style="flex:1;font-size:10px;padding:6px">分类②</div>
+        <div class="placeholder" style="flex:1;font-size:10px;padding:6px">分类③</div>
+        <div class="placeholder" style="flex:1;font-size:10px;padding:6px">分类④</div>
+        <div class="placeholder" style="flex:1;font-size:10px;padding:6px">分类⑤</div>
+      </div>
+      <div style="font-size:11px;font-weight:700;margin:6px 0 4px">热销商品</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px">
+        <div class="placeholder" style="font-size:9px;padding:8px 2px">商品</div>
+        <div class="placeholder" style="font-size:9px;padding:8px 2px">商品</div>
+        <div class="placeholder" style="font-size:9px;padding:8px 2px">商品</div>
+        <div class="placeholder" style="font-size:9px;padding:8px 2px">商品</div>
+      </div>
+      <div style="font-size:11px;font-weight:700;margin:6px 0 4px">优惠券 · 拼团</div>
+      <div style="display:flex;gap:4px">
+        <div class="placeholder" style="flex:1;font-size:9px;padding:6px">券</div>
+        <div class="placeholder" style="flex:1;font-size:9px;padding:6px">拼团</div>
+      </div>
+      <div style="font-size:10px;color:#64748b;margin-top:6px">种草入口 ↓（弱）</div>
+    </div>
+    <div class="card-body">
+      <h3>A · 商城主导</h3>
+      <p>像淘宝/京东：搜索+分类+商品网格为主，促销次之，种草只是底部入口。最"像商城"。</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:16px;background:#f8fafc">
+      <div style="font-weight:800;font-size:13px;margin-bottom:8px;color:#0f766e">方向 B：商城 + 种草平衡</div>
+      <div class="mock-nav" style="font-size:11px;padding:6px 8px">🔍 搜索 &nbsp;|&nbsp; 商城 社区 拼团</div>
+      <div style="background:linear-gradient(120deg,#0f766e,#10b981);color:#fff;font-size:11px;padding:10px;margin:6px 0;border-radius:4px">Hero: 当季推荐 / 热门活动</div>
+      <div style="display:grid;grid-template-columns:2fr 1fr;gap:6px;margin-top:6px">
+        <div>
+          <div style="font-size:11px;font-weight:700;margin-bottom:4px">为你推荐商品</div>
+          <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:4px">
+            <div class="placeholder" style="font-size:9px;padding:10px 2px">商品</div>
+            <div class="placeholder" style="font-size:9px;padding:10px 2px">商品</div>
+            <div class="placeholder" style="font-size:9px;padding:10px 2px">商品</div>
+            <div class="placeholder" style="font-size:9px;padding:10px 2px">商品</div>
+          </div>
+          <div style="font-size:10px;color:#64748b;margin-top:4px">拼团 · 优惠券入口</div>
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:700;margin-bottom:4px">种草动态</div>
+          <div class="placeholder" style="font-size:9px;padding:8px 2px;margin-bottom:4px">📷 帖子+商品</div>
+          <div class="placeholder" style="font-size:9px;padding:8px 2px;margin-bottom:4px">📷 帖子+商品</div>
+          <div class="placeholder" style="font-size:9px;padding:8px 2px">📷 帖子+商品</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B · 商城 + 种草平衡</h3>
+      <p>左商品右种草，或上下分区。兼顾购物和社区，符合"社交新零售"定位。信息密度高。</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:16px;background:#f8fafc">
+      <div style="font-weight:800;font-size:13px;margin-bottom:8px;color:#db2777">方向 C：种草社区主导</div>
+      <div class="mock-nav" style="font-size:11px;padding:6px 8px">🔍 搜索 &nbsp;|&nbsp; 关注 推荐 拼团</div>
+      <div style="display:flex;gap:4px;margin:6px 0">
+        <div class="placeholder" style="flex:1;font-size:10px;padding:5px">关注</div>
+        <div class="placeholder" style="flex:1;font-size:10px;padding:5px;background:#db2777;color:#fff">推荐</div>
+        <div class="placeholder" style="flex:1;font-size:10px;padding:5px">种草</div>
+        <div class="placeholder" style="flex:1;font-size:10px;padding:5px">商家</div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:4px">
+        <div style="background:#fce7f3;border-radius:4px;padding:6px;font-size:9px">
+          <div class="placeholder" style="padding:14px 2px;margin-bottom:3px">📷 图片</div>
+          <div style="font-weight:700">种草标题</div>
+          <div style="display:flex;gap:2px;margin-top:3px">
+            <div class="placeholder" style="flex:1;padding:4px;font-size:8px">商品卡</div>
+          </div>
+        </div>
+        <div style="background:#fce7f3;border-radius:4px;padding:6px;font-size:9px">
+          <div class="placeholder" style="padding:14px 2px;margin-bottom:3px">📷 图片</div>
+          <div style="font-weight:700">种草标题</div>
+          <div style="display:flex;gap:2px;margin-top:3px">
+            <div class="placeholder" style="flex:1;padding:4px;font-size:8px">商品卡</div>
+          </div>
+        </div>
+        <div style="background:#fce7f3;border-radius:4px;padding:6px;font-size:9px">
+          <div class="placeholder" style="padding:14px 2px;margin-bottom:3px">📷 图片</div>
+          <div style="font-weight:700">种草标题</div>
+        </div>
+        <div style="background:#fce7f3;border-radius:4px;padding:6px;font-size:9px">
+          <div class="placeholder" style="padding:14px 2px;margin-bottom:3px">📷 图片</div>
+          <div style="font-weight:700">种草标题</div>
+        </div>
+      </div>
+      <div style="font-size:10px;color:#64748b;margin-top:6px">商城入口弱化（顶部 tab）</div>
+    </div>
+    <div class="card-body">
+      <h3>C · 种草社区主导</h3>
+      <p>像小红书：种草内容瀑布流为主，商品嵌在帖子里。最"内容感"，但商城属性弱，购物路径长。</p>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:24px">
+  <h3>我的推荐</h3>
+  <p>考虑到项目定位是"社交新零售电商"，且后端已有完整的商品/拼团/优惠券/种草链路，我推荐 <strong>方向 B（商城+种草平衡）</strong>：既能体现"商城感"（商品+分类+促销），又能利用"种草来源加购→积分奖励"的核心玩法。方向 A 太传统浪费了种草链路，方向 C 商城属性太弱。</p>
+  <p>但这是你的项目，你更了解目标用户。请在浏览器中点选一个方向，或在终端告诉我你的想法（也可以提"混合 D"）。</p>
+</div>
