@@ -19,11 +19,20 @@ export function yuanToCent(value: string | number | undefined) {
   return Math.round(numberValue * 100)
 }
 
+const LIST_SEPARATOR_PATTERN = /[,\uFF0C;；\s]+/
+
 export function ids(value?: string) {
   return (value || '')
-    .split(',')
+    .split(LIST_SEPARATOR_PATTERN)
     .map((item) => Number(item.trim()))
     .filter((item) => Number.isFinite(item) && item > 0)
+}
+
+export function tags(value?: string) {
+  return (value || '')
+    .split(LIST_SEPARATOR_PATTERN)
+    .map((item) => item.trim())
+    .filter(Boolean)
 }
 
 export function pickData(response: unknown) {
@@ -52,6 +61,7 @@ export function statusText(status?: string) {
     on_sale: '上架中',
     off_sale: '已下架',
     pending_payment: '待支付',
+    group_pending: '待成团',
     pending_shipment: '待发货',
     shipping: '待收货',
     completed: '已完成',
@@ -65,16 +75,28 @@ export function statusText(status?: string) {
     unused: '未使用',
     used: '已使用',
     expired: '已过期',
+    void: '已作废',
+    pending_approval: '售后待审核',
+    received: '已收到退货',
+    refunded: '已退款',
+    partial_refunded: '部分退款',
+    paid: '已支付',
+    unpaid: '未支付',
+    group_buy: '拼团订单',
   }
   return status ? map[status] ?? status : '-'
 }
 
 export function statusColor(status?: string) {
-  if (['approved', 'on_sale', 'completed', 'published', 'active', 'unused'].includes(status || '')) return 'green'
-  if (['pending', 'pending_payment', 'pending_shipment', 'shipping', 'after_sale', 'merchant_pending'].includes(status || '')) {
+  if (['approved', 'on_sale', 'completed', 'published', 'active', 'unused', 'paid', 'refunded'].includes(status || '')) {
+    return 'green'
+  }
+  if (['pending', 'pending_payment', 'group_pending', 'pending_shipment', 'shipping', 'after_sale', 'merchant_pending', 'pending_approval', 'received', 'unpaid', 'partial_refunded'].includes(status || '')) {
     return 'orange'
   }
-  if (['rejected', 'off_sale', 'cancelled', 'closed', 'hidden', 'disabled', 'expired'].includes(status || '')) return 'red'
+  if (['rejected', 'off_sale', 'cancelled', 'closed', 'hidden', 'disabled', 'expired', 'void'].includes(status || '')) {
+    return 'red'
+  }
   return 'blue'
 }
 

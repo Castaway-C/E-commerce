@@ -19,12 +19,27 @@ export type Review = {
 export type Refund = {
   id: number
   order_id: number
+  order_item_id?: number | null
+  product_id?: number | null
+  sku_id?: number | null
   user_id: number
+  quantity: number
   refund_amount_cent: number
   reason_type: string
   reason: string
+  image_urls: string[]
   status: string
   origin_order_status: string
+  created_at?: string | null
+  updated_at?: string | null
+  logs: {
+    id: number
+    operator_type: string
+    operator_id?: number | null
+    action: string
+    message: string
+    created_at?: string | null
+  }[]
 }
 
 export const adminOrderService = {
@@ -36,8 +51,8 @@ export const adminOrderService = {
     return http.post<unknown, { data: Review }>(`/admin/reviews/${reviewId}/audit`, { approved })
   },
 
-  listRefunds() {
-    return http.get<unknown, { data: { list: Refund[]; total: number } }>('/admin/refunds')
+  listRefunds(params?: { status?: string; order_id?: number; user_id?: number; merchant_id?: number }) {
+    return http.get<unknown, { data: { list: Refund[]; total: number } }>('/admin/refunds', { params })
   },
 
   approveRefund(refundId: number) {

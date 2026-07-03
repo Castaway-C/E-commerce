@@ -41,7 +41,7 @@ export function ProductAdminPage() {
 
   function parseProductIds() {
     return batchIds
-      .split(',')
+      .split(/[,\uFF0C;；\s]+/)
       .map((item) => Number(item.trim()))
       .filter((item) => Number.isFinite(item) && item > 0)
   }
@@ -153,7 +153,7 @@ export function ProductAdminPage() {
           查看库存流水
         </button>
         <label>
-          批量商品 ID，逗号分隔
+          批量商品 ID，可用中文逗号、英文逗号或空格分隔
           <input value={batchIds} onChange={(event) => setBatchIds(event.target.value)} />
         </label>
         <button type="button" onClick={() => handleBatchPublish(true)}>

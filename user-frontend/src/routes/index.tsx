@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 
 import { LoginPage } from '../pages/auth/login'
 import { RegisterPage } from '../pages/auth/register'
+import { MerchantPage } from '../pages/merchant'
 import { UserTestConsolePage } from '../pages/test-console'
 
 export function AppRoutes() {
@@ -11,6 +12,8 @@ export function AppRoutes() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/products" element={<UserTestConsolePage />} />
+      <Route path="/group-buy" element={<UserTestConsolePage />} />
+      <Route path="/merchants/:merchantId" element={<MerchantPage />} />
       <Route path="/cart" element={<UserTestConsolePage />} />
       <Route path="/checkout" element={<UserTestConsolePage />} />
       <Route path="/community" element={<UserTestConsolePage />} />

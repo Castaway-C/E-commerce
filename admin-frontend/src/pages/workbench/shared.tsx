@@ -16,9 +16,11 @@ export function yuanToCent(value: string) {
   return Math.round(numberValue * 100)
 }
 
+const LIST_SEPARATOR_PATTERN = /[,\uFF0C;；\s]+/
+
 export function ids(value: string) {
   return value
-    .split(',')
+    .split(LIST_SEPARATOR_PATTERN)
     .map((item) => Number(item.trim()))
     .filter((item) => Number.isFinite(item) && item > 0)
 }

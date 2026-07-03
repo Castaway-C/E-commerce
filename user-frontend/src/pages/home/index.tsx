@@ -1,11 +1,11 @@
-import { Link } from 'react-router-dom'
+﻿import { Link } from 'react-router-dom'
 
 export function HomePage() {
   return (
     <main>
       <h1>一次买够用户端测试入口</h1>
       <p>
-        当前可测试：注册登录、地址管理、商品浏览、加购、优惠券、结算、模拟支付、确认收货、评价、售后申请、社区发帖和种草来源下单。
+        当前可测试：注册登录、地址管理、商品浏览、加购、优惠券、结算、支付宝沙箱支付、确认收货、评价、售后申请、社区发帖和种草来源下单。
       </p>
       <ol>
         <li>
@@ -24,7 +24,7 @@ export function HomePage() {
           可到 <Link to="/promotions">优惠券页</Link> 领取优惠券，并在结算页填写用户券 ID。
         </li>
         <li>
-          在 <Link to="/checkout">结算页</Link> 提交订单并模拟支付。
+          在 <Link to="/checkout">结算页</Link> 提交订单并支付宝沙箱支付。
         </li>
         <li>
           到 <Link to="/community">社区页</Link> 测试发帖、点赞、评论和种草来源下单。

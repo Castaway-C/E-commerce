@@ -122,7 +122,7 @@ export function OrderAdminPage() {
           <ul>
             {refunds.map((refund) => (
               <li key={refund.id}>
-                #{refund.id} 订单 {refund.order_id} - {refund.status} - {refund.reason_type} - ￥
+                #{refund.id} 订单 {refund.order_id} 明细 {refund.order_item_id ?? '无'} 商品 {refund.product_id ?? '无'} SKU {refund.sku_id ?? '无'} 数量 {refund.quantity} - {refund.status} - {refund.reason_type} - ￥
                 {(refund.refund_amount_cent / 100).toFixed(2)} - {refund.reason}
                 <button type="button" onClick={() => handleApprove(refund.id)}>
                   同意

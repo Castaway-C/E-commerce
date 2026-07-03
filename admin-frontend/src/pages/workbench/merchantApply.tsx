@@ -112,14 +112,14 @@ export function MerchantApplyPage() {
                 password: '12345678',
                 real_name: '商家负责人',
                 merchant_name: `申请店铺_${Math.random().toString(16).slice(2, 6)}`,
-                announcement: '申请入驻一次买够平台',
+                announcement: '说明主营类目、经营范围和入驻理由。',
               }}
             >
               <Form.Item label="登录用户名" name="username" rules={[{ required: true }]}><Input /></Form.Item>
               <Form.Item label="密码" name="password" rules={[{ required: true, min: 8 }]}><Input.Password /></Form.Item>
               <Form.Item label="负责人姓名" name="real_name" rules={[{ required: true }]}><Input /></Form.Item>
               <Form.Item label="店铺名称" name="merchant_name" rules={[{ required: true }]}><Input /></Form.Item>
-              <Form.Item label="店铺公告" name="announcement"><Input.TextArea rows={3} /></Form.Item>
+              <Form.Item label="入驻申请说明" name="announcement"><Input.TextArea rows={3} /></Form.Item>
               <Button type="primary" htmlType="submit">提交入驻申请</Button>
             </Form>
           </Card>
@@ -136,7 +136,7 @@ export function MerchantApplyPage() {
             </Form>
             <Form layout="vertical" onFinish={resubmit} className="resubmit-form">
               <Form.Item label="店铺名称" name="merchant_name" rules={[{ required: true }]}><Input /></Form.Item>
-              <Form.Item label="店铺公告" name="announcement"><Input.TextArea rows={3} /></Form.Item>
+              <Form.Item label="入驻申请说明" name="announcement"><Input.TextArea rows={3} /></Form.Item>
               <Button htmlType="submit">重新提交资料</Button>
             </Form>
           </Card>

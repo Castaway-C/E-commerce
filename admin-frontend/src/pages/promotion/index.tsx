@@ -2,6 +2,13 @@ import { FormEvent, useEffect, useState } from 'react'
 
 import { adminPromotionService, type CouponPayload, type CouponTemplate } from '../../services/promotion'
 
+function parseIds(value: string) {
+  return value
+    .split(/[,\uFF0C;；\s]+/)
+    .map((item) => Number(item.trim()))
+    .filter((item) => Number.isFinite(item) && item > 0)
+}
+
 export function PromotionAdminPage() {
   const [templates, setTemplates] = useState<CouponTemplate[]>([])
   const [name, setName] = useState('测试优惠券')
@@ -15,13 +22,6 @@ export function PromotionAdminPage() {
   const [selectedTemplateId, setSelectedTemplateId] = useState('')
   const [grantUserIds, setGrantUserIds] = useState('')
   const [message, setMessage] = useState('')
-
-  function parseIds(value: string) {
-    return value
-      .split(',')
-      .map((item) => Number(item.trim()))
-      .filter((item) => Number.isFinite(item) && item > 0)
-  }
 
   function buildPayload(): CouponPayload {
     return {
@@ -42,7 +42,7 @@ export function PromotionAdminPage() {
   }
 
   useEffect(() => {
-    loadTemplates().catch(() => setTemplates([]))
+    void loadTemplates()
   }, [])
 
   async function handleCreate(event: FormEvent<HTMLFormElement>) {
@@ -53,7 +53,7 @@ export function PromotionAdminPage() {
       setMessage(`优惠券模板已创建，ID：${response.data.id}`)
       await loadTemplates()
     } catch {
-      setMessage('创建失败。商家运营只能创建本店铺 merchant 范围优惠券。')
+      setMessage('创建失败。商家运营只能创建本店铺、本店商品或本店 SKU 范围的优惠券。')
     }
   }
 
@@ -64,7 +64,7 @@ export function PromotionAdminPage() {
       setMessage(`模板已更新，当前状态：${response.data.status}`)
       await loadTemplates()
     } catch {
-      setMessage('更新失败，请检查模板ID、权限和表单数据')
+      setMessage('更新失败，请检查模板 ID、权限和表单数据。')
     }
   }
 
@@ -75,7 +75,7 @@ export function PromotionAdminPage() {
       setMessage(`模板 #${templateId} 已停用，状态：${response.data.status}`)
       await loadTemplates()
     } catch {
-      setMessage('停用失败')
+      setMessage('停用失败，请确认当前账号有权限管理该模板。')
     }
   }
 
@@ -87,7 +87,7 @@ export function PromotionAdminPage() {
         `批量发券完成：成功 ${response.data.granted_count}；跳过用户 ${response.data.skipped_user_ids.join(',') || '无'}`,
       )
     } catch {
-      setMessage('批量发券失败，请确认当前账号为平台运营')
+      setMessage('批量发券失败，请确认当前账号为平台运营。')
     }
   }
 
@@ -97,14 +97,14 @@ export function PromotionAdminPage() {
       const response = await adminPromotionService.expireUserCoupons()
       setMessage(`手动过期完成，处理用户券数量：${response.data.expired_count}`)
     } catch {
-      setMessage('手动过期失败，请确认当前账号为平台运营')
+      setMessage('手动过期失败，请确认当前账号为平台运营。')
     }
   }
 
   return (
     <main>
       <h1>促销管理</h1>
-      <p>当前测试页覆盖优惠券模板、停用、批量发券和手动过期。满减、限时价、拼团仍待后续。</p>
+      <p>当前备用页覆盖优惠券模板、停用、批量发券和手动过期；日常联调优先使用平台运营工作台。</p>
       <form onSubmit={handleCreate}>
         <h2>创建/编辑优惠券模板</h2>
         <label>
@@ -114,8 +114,8 @@ export function PromotionAdminPage() {
         <label>
           适用范围
           <select value={scopeType} onChange={(event) => setScopeType(event.target.value)}>
-            <option value="all">全部</option>
-            <option value="platform">平台</option>
+            <option value="all">全平台</option>
+            <option value="platform">平台通用</option>
             <option value="merchant">店铺</option>
             <option value="category">分类</option>
             <option value="product">商品</option>
@@ -123,7 +123,7 @@ export function PromotionAdminPage() {
           </select>
         </label>
         <label>
-          范围 ID，逗号分隔
+          范围 ID，可用中文逗号、英文逗号或空格分隔
           <input value={scopeIds} onChange={(event) => setScopeIds(event.target.value)} />
         </label>
         <label>
@@ -161,7 +161,7 @@ export function PromotionAdminPage() {
       <section>
         <h2>批量发券 / 过期</h2>
         <label>
-          用户 ID，逗号分隔
+          用户 ID，可用中文逗号、英文逗号或空格分隔
           <input value={grantUserIds} onChange={(event) => setGrantUserIds(event.target.value)} />
         </label>
         <button type="button" onClick={handleBatchGrant}>
@@ -180,9 +180,8 @@ export function PromotionAdminPage() {
           <ul>
             {templates.map((template) => (
               <li key={template.id}>
-                #{template.id} {template.name} - {template.scope_type} [{template.scope_ids.join(',') || '全部'}] -{' '}
-                {template.discount_type}:{template.discount_value} - 状态 {template.status} - 已领{' '}
-                {template.claimed_quantity}/{template.total_quantity || '不限'}
+                #{template.id} {template.name} - {template.scope_type} [{template.scope_ids.join(',') || '全部'}] - 状态
+                {template.status} - 已领 {template.claimed_quantity}/{template.total_quantity || '不限'}
                 <button type="button" onClick={() => handleDisable(template.id)}>
                   停用
                 </button>
@@ -190,7 +189,7 @@ export function PromotionAdminPage() {
             ))}
           </ul>
         ) : (
-          <p>暂无模板</p>
+          <p>暂无模板。</p>
         )}
       </section>
       {message && <p>{message}</p>}

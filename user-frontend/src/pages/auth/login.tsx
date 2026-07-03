@@ -1,4 +1,4 @@
-import { Button, Card, Col, Form, Input, Row, Space, Typography, message } from 'antd'
+﻿import { Button, Card, Col, Form, Input, Row, Space, Typography, message } from 'antd'
 import { Link, useNavigate } from 'react-router-dom'
 
 import { authService } from '../../services/auth'
@@ -26,7 +26,7 @@ export function LoginPage() {
         <div>
           <Text className="eyebrow">用户账号</Text>
           <Title level={1}>登录一次买够</Title>
-          <Paragraph>登录后可加入购物车、提交订单、模拟支付、确认收货，并发布社区帖子。</Paragraph>
+          <Paragraph>登录后可加入购物车、提交订单、支付宝沙箱支付、确认收货，并发布社区帖子。</Paragraph>
         </div>
       </section>
 

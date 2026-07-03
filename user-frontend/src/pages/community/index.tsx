@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
+import { QRCode } from 'antd'
 
 import { communityService, type CommunityPost } from '../../services/community'
+import { getApiErrorMessage } from '../../services/http'
 import { orderService } from '../../services/order'
 
 export function CommunityPage() {
@@ -15,6 +17,7 @@ export function CommunityPage() {
   const [sourcePostId, setSourcePostId] = useState('')
   const [sourceSkuId, setSourceSkuId] = useState('')
   const [message, setMessage] = useState('')
+  const [alipayQrCode, setAlipayQrCode] = useState('')
 
   async function loadPosts() {
     const response = await communityService.listPosts()
@@ -27,9 +30,16 @@ export function CommunityPage() {
 
   function parseNumbers(value: string) {
     return value
-      .split(',')
+      .split(/[,\uFF0C;；\s]+/)
       .map((item) => Number(item.trim()))
       .filter((item) => Number.isFinite(item) && item > 0)
+  }
+
+  function parseTags(value: string) {
+    return value
+      .split(/[,\uFF0C;；\s]+/)
+      .map((item) => item.trim())
+      .filter(Boolean)
   }
 
   async function handleCreatePost() {
@@ -40,10 +50,7 @@ export function CommunityPage() {
         title,
         content,
         product_ids: parseNumbers(productIds),
-        topic_tags: topicTags
-          .split(',')
-          .map((item) => item.trim())
-          .filter(Boolean),
+        topic_tags: parseTags(topicTags),
       })
       setMessage(`帖子已提交审核，ID：${response.data.id}，状态：${response.data.status}`)
     } catch {
@@ -74,16 +81,18 @@ export function CommunityPage() {
 
   async function handleSourceOrder() {
     setMessage('')
+    setAlipayQrCode('')
     try {
       await orderService.addCartItem({ sku_id: Number(sourceSkuId), quantity: 1 })
       const response = await orderService.createOrder({
         client_order_token: crypto.randomUUID(),
         source_post_id: Number(sourcePostId),
       })
-      await orderService.pay(response.data.payment_id)
-      setMessage(`来源订单已创建并模拟支付。支付单ID：${response.data.payment_id}，订单ID：${response.data.order_ids.join(',')}`)
-    } catch {
-      setMessage('来源下单失败，请确认帖子为已发布种草帖且关联该 SKU 的商品')
+      const alipayResponse = await orderService.precreateAlipay(response.data.payment_id)
+      setAlipayQrCode(alipayResponse.data.qr_code)
+      setMessage(`来源订单已创建，请使用支付宝沙箱支付。支付单ID：${response.data.payment_id}，订单ID：${response.data.order_ids.join(',')}`)
+    } catch (error) {
+      setMessage(`来源下单失败：${getApiErrorMessage(error)}`)
     }
   }
 
@@ -102,8 +111,8 @@ export function CommunityPage() {
         </label>
         <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="标题" />
         <input value={content} onChange={(event) => setContent(event.target.value)} placeholder="内容" />
-        <input value={productIds} onChange={(event) => setProductIds(event.target.value)} placeholder="关联商品ID，逗号分隔" />
-        <input value={topicTags} onChange={(event) => setTopicTags(event.target.value)} placeholder="标签，逗号分隔" />
+        <input value={productIds} onChange={(event) => setProductIds(event.target.value)} placeholder="关联商品ID，支持中英文逗号或空格" />
+        <input value={topicTags} onChange={(event) => setTopicTags(event.target.value)} placeholder="标签，支持中英文逗号或空格" />
         <button type="button" onClick={handleCreatePost}>
           提交帖子
         </button>
@@ -144,7 +153,13 @@ export function CommunityPage() {
         <button type="button" onClick={handleSourceOrder}>
           加购并来源下单
         </button>
-        <p>下单并模拟支付后，到订单页确认收货，种草帖作者会增加基础积分。</p>
+        <p>下单并完成支付宝沙箱支付后，到订单页同步支付结果并确认收货，种草帖作者会增加基础积分。</p>
+        {alipayQrCode ? (
+          <div>
+            <QRCode value={alipayQrCode} size={180} />
+            <p>{alipayQrCode}</p>
+          </div>
+        ) : null}
       </section>
       {message && <p>{message}</p>}
     </main>
