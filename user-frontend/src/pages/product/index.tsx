@@ -1,13 +1,11 @@
 import {
   Button,
   Card,
-  Col,
   Empty,
   Image,
   Input,
   InputNumber,
   Pagination,
-  Row,
   Select,
   Skeleton,
   Space,
@@ -15,6 +13,7 @@ import {
   Typography,
   message,
 } from 'antd'
+import { SearchOutlined } from '@ant-design/icons'
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { getApiErrorMessage } from '../../services/http'
@@ -124,143 +123,174 @@ export function ProductPage() {
   }, [categoryId, minPriceYuan, maxPriceYuan, productSort])
 
   return (
-    <main style={{ padding: 16 }}>
-      <Row gutter={[16, 16]}>
-        <Col span={6}>
-          <Card title="商品筛选" size="small">
-            <Space direction="vertical" size={12} style={{ width: '100%' }}>
-              <div>
-                <Text type="secondary">分类</Text>
-                <div style={{ marginTop: 8 }}>
-                  <Button
-                    block
-                    type={categoryId === undefined ? 'primary' : 'default'}
-                    style={{ textAlign: 'left', marginBottom: 6 }}
-                    onClick={() => setCategoryId(undefined)}
-                  >
-                    全部商品
-                  </Button>
-                  {categoryTree.map((category) => (
-                    <Button
-                      key={category.id}
-                      block
-                      type={categoryId === category.id ? 'primary' : 'default'}
-                      style={{ textAlign: 'left', marginBottom: 6, paddingLeft: 8 + (category.depth - 1) * 16 }}
-                      title={category.label}
-                      onClick={() => setCategoryId(category.id)}
-                    >
-                      <span>
-                        #{category.id} {category.name}
-                        {category.depth > 1 ? <Text type="secondary" style={{ fontSize: 12 }}> · {category.parentName}</Text> : null}
-                      </span>
-                    </Button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <Text type="secondary">价格范围（元）</Text>
-                <Space.Compact style={{ width: '100%', marginTop: 8 }}>
-                  <InputNumber
-                    min={0}
-                    precision={2}
-                    placeholder="最低价"
-                    value={minPriceYuan ?? undefined}
-                    onChange={(value) => setMinPriceYuan(value === null ? null : Number(value))}
-                    style={{ width: '50%' }}
-                  />
-                  <InputNumber
-                    min={0}
-                    precision={2}
-                    placeholder="最高价"
-                    value={maxPriceYuan ?? undefined}
-                    onChange={(value) => setMaxPriceYuan(value === null ? null : Number(value))}
-                    style={{ width: '50%' }}
-                  />
-                </Space.Compact>
-              </div>
-              <div>
-                <Text type="secondary">排序方式</Text>
-                <Select
-                  style={{ width: '100%', marginTop: 8 }}
-                  value={productSort}
-                  onChange={setProductSort}
-                  options={[
-                    { value: 'newest:desc', label: '最新上架' },
-                    { value: 'price:asc', label: '价格升序' },
-                    { value: 'price:desc', label: '价格降序' },
-                    { value: 'sales:desc', label: '销量优先' },
-                  ]}
-                />
-              </div>
-              <Button block onClick={() => loadProducts(categoryId, 1)}>刷新商品</Button>
-            </Space>
-          </Card>
-        </Col>
+    <div className="product-page">
+      {/* ── Hero Banner ── */}
+      <div className="product-hero">
+        <div className="product-hero-bg" />
+        <div className="product-hero-inner">
+          <h1 className="product-hero-title">发现好物</h1>
+          <p className="product-hero-subtitle">品质生活，从这里开始</p>
+          <Input.Search
+            size="large"
+            allowClear
+            placeholder="搜索你想要的商品…"
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+            onSearch={() => loadProducts(categoryId, 1)}
+            className="product-search-bar"
+          />
+        </div>
+      </div>
 
-        <Col span={18}>
-          <Card
-            title="商品商城"
-            extra={
-              <Input.Search
-                allowClear
-                placeholder="搜索商品"
-                value={keyword}
-                onChange={(event) => setKeyword(event.target.value)}
-                onSearch={() => loadProducts(categoryId, 1)}
-                style={{ width: 220 }}
+      {/* ── Filter Bar ── */}
+      <div className="product-filter-bar">
+        {/* Category chips */}
+        <div className="filter-section">
+          <Text className="filter-section-label">分类</Text>
+          <div className="filter-chips">
+            <Button
+              shape="round"
+              type={categoryId === undefined ? 'primary' : 'default'}
+              size="small"
+              onClick={() => setCategoryId(undefined)}
+              className="filter-chip"
+            >
+              全部
+            </Button>
+            {categoryTree.slice(0, 24).map((cat) => (
+              <Button
+                key={cat.id}
+                shape="round"
+                type={categoryId === cat.id ? 'primary' : 'default'}
+                size="small"
+                onClick={() => setCategoryId(cat.id)}
+                className="filter-chip"
+              >
+                {cat.name}
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        {/* Price + Sort + Actions */}
+        <div className="filter-actions">
+          <div className="filter-group">
+            <Text className="filter-group-label">价格</Text>
+            <Space.Compact>
+              <InputNumber
+                min={0}
+                precision={2}
+                placeholder="最低"
+                value={minPriceYuan ?? undefined}
+                onChange={(v) => setMinPriceYuan(v === null ? null : Number(v))}
+                className="filter-price-input"
               />
-            }
+              <span className="filter-price-sep">—</span>
+              <InputNumber
+                min={0}
+                precision={2}
+                placeholder="最高"
+                value={maxPriceYuan ?? undefined}
+                onChange={(v) => setMaxPriceYuan(v === null ? null : Number(v))}
+                className="filter-price-input"
+              />
+            </Space.Compact>
+          </div>
+
+          <div className="filter-group">
+            <Text className="filter-group-label">排序</Text>
+            <Select
+              value={productSort}
+              onChange={setProductSort}
+              className="filter-sort-select"
+              options={[
+                { value: 'newest:desc', label: '最新上架' },
+                { value: 'price:asc', label: '价格升序' },
+                { value: 'price:desc', label: '价格降序' },
+                { value: 'sales:desc', label: '销量优先' },
+              ]}
+            />
+          </div>
+
+          <Button
+            type="primary"
+            icon={<SearchOutlined />}
+            onClick={() => loadProducts(categoryId, 1)}
+            className="btn-filter-apply"
           >
-            <Skeleton loading={loading} active>
-              {products.length === 0 ? (
-                <Empty description="暂无商品" />
-              ) : (
-                <Row gutter={[16, 16]}>
-                  {products.map((product) => (
-                    <Col span={8} key={product.id}>
-                      <Link to={`/products/${product.id}`}>
-                        <Card
-                          hoverable
-                          cover={
-                            product.cover_url ? (
-                              <Image preview={false} src={absoluteAssetUrl(product.cover_url)} style={{ height: 180, objectFit: 'cover' }} />
-                            ) : (
-                              <div style={{ height: 180, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fafafa' }}>
-                                <Text type="secondary">商品图</Text>
-                              </div>
-                            )
-                          }
-                        >
-                          <Space direction="vertical" size={6} style={{ width: '100%' }}>
-                            <Space wrap>
-                              <Tag color="blue">商品 #{product.id}</Tag>
-                              <Tag color="purple">店铺 #{product.merchant_id}</Tag>
-                            </Space>
-                            <Text strong ellipsis style={{ display: 'block' }}>{product.name}</Text>
-                            <Text type="secondary" style={{ fontSize: 12 }}>{product.merchant_name}</Text>
-                            <Space size={8} align="baseline">
-                              <Text style={{ color: '#f50', fontSize: 18 }}>￥{yuan(product.price_cent)}</Text>
-                              {product.market_price_cent ? (
-                                <Text delete type="secondary">￥{yuan(product.market_price_cent)}</Text>
-                              ) : null}
-                            </Space>
-                            {product.tags.length > 0 ? (
-                              <Space wrap size={4}>
-                                {product.tags.map((tag) => (
-                                  <Tag key={tag}>{tag}</Tag>
-                                ))}
-                              </Space>
-                            ) : null}
-                            <Text type="secondary" style={{ fontSize: 12 }}>销量 {product.sales_count}</Text>
-                            <Button type="link" style={{ padding: 0 }}>查看详情</Button>
-                          </Space>
-                        </Card>
-                      </Link>
-                    </Col>
-                  ))}
-                </Row>
-              )}
-              <div style={{ marginTop: 16, textAlign: 'right' }}>
+            筛选
+          </Button>
+        </div>
+      </div>
+
+      {/* ── Product Grid ── */}
+      <div className="product-section">
+        <Skeleton loading={loading} active paragraph={{ rows: 10 }}>
+          {products.length === 0 ? (
+            <Empty
+              description="暂无符合条件的商品"
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+              style={{ padding: '80px 0' }}
+            />
+          ) : (
+            <>
+              <div className="product-grid">
+                {products.map((product) => (
+                  <Link
+                    to={`/products/${product.id}`}
+                    key={product.id}
+                    className="product-card-link"
+                  >
+                    <Card
+                      hoverable
+                      className="product-ec-card"
+                      cover={
+                        <div className="pec-cover">
+                          {product.cover_url ? (
+                            <Image
+                              preview={false}
+                              src={absoluteAssetUrl(product.cover_url)}
+                              alt={product.name}
+                              fallback="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Crect fill='%23f5f5f5' width='300' height='300'/%3E%3Ctext x='50%25' y='50%25' fill='%23ccc' text-anchor='middle' dy='.3em' font-size='14'%3E暂无图片%3C/text%3E%3C/svg%3E"
+                            />
+                          ) : (
+                            <div className="pec-cover-placeholder">
+                              <Text type="secondary">暂无图片</Text>
+                            </div>
+                          )}
+                        </div>
+                      }
+                    >
+                      <div className="pec-info">
+                        <div className="pec-tags">
+                          <Tag className="pec-tag-id">#{product.id}</Tag>
+                          {product.tags.slice(0, 2).map((tag) => (
+                            <Tag key={tag} className="pec-tag-label">{tag}</Tag>
+                          ))}
+                        </div>
+                        <Text strong ellipsis className="pec-name" title={product.name}>
+                          {product.name}
+                        </Text>
+                        <Text type="secondary" ellipsis className="pec-merchant">
+                          {product.merchant_name}
+                        </Text>
+                        <div className="pec-price-row">
+                          <span className="pec-price">¥{yuan(product.price_cent)}</span>
+                          {product.market_price_cent ? (
+                            <span className="pec-market-price">¥{yuan(product.market_price_cent)}</span>
+                          ) : null}
+                        </div>
+                        <div className="pec-footer">
+                          <Text type="secondary" className="pec-sales">已售 {product.sales_count}</Text>
+                          <span className="pec-action">查看详情 →</span>
+                        </div>
+                      </div>
+                    </Card>
+                  </Link>
+                ))}
+              </div>
+
+              <div className="product-pagination">
                 <Pagination
                   current={productPage}
                   pageSize={productPageSize}
@@ -270,10 +300,10 @@ export function ProductPage() {
                   onChange={(page, pageSize) => loadProducts(categoryId, page, pageSize)}
                 />
               </div>
-            </Skeleton>
-          </Card>
-        </Col>
-      </Row>
-    </main>
+            </>
+          )}
+        </Skeleton>
+      </div>
+    </div>
   )
 }
