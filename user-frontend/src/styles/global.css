@@ -1757,58 +1757,18 @@ pre {
   margin-bottom: 16px;
 }
 
-/* ── Settings Bar ── */
+/* ── Notice (替代原 gb-settings-bar) ── */
 
-.gb-settings-bar {
+.gb-notice {
   margin-bottom: 24px;
-  padding: 18px 24px;
+  padding: 14px 20px;
   background: #fff;
   border: 1px solid rgba(148, 163, 184, 0.12);
-  border-radius: 14px;
-  box-shadow: 0 2px 12px rgba(15, 23, 42, 0.04);
-}
-
-.gb-settings-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 20px;
-}
-
-.gb-setting-item {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.gb-setting-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: #64748b;
-}
-
-.gb-address-select {
-  min-width: 220px;
-}
-
-.gb-qty-input {
-  width: 90px;
-}
-
-.gb-points-input {
-  width: 110px;
-}
-
-.gb-setting-hint {
-  font-size: 11px;
-  color: #94a3b8;
-}
-
-.gb-setting-actions {
-  flex-direction: row;
-  align-items: flex-end;
-  gap: 8px;
-  margin-left: auto;
+  border-left: 3px solid var(--ec-blue);
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #475569;
 }
 
 /* ── Activity Grid ── */
@@ -1942,15 +1902,17 @@ pre {
   font-weight: 600;
 }
 
-.gb-ac-total {
-  color: #334155;
+.gb-ac-unit {
+  color: #94a3b8;
   font-size: 13px;
   font-weight: 600;
 }
 
-.gb-ac-points-hint {
-  color: #94a3b8;
-  font-size: 11px;
+.gb-ac-total {
+  color: #334155;
+  font-size: 13px;
+  font-weight: 600;
+  margin-left: auto;
 }
 
 .gb-ac-deadline {
@@ -2051,74 +2013,6 @@ pre {
   box-shadow: var(--ec-blue-glow) !important;
 }
 
-/* ── Payment Card ── */
-
-.gb-payment-card {
-  border-radius: 14px !important;
-}
-
-.gb-payment-title {
-  font-size: 16px;
-  font-weight: 800;
-  color: #0f172a;
-}
-
-.gb-payment-body {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 20px;
-}
-
-.gb-payment-info {
-  width: 100%;
-}
-
-.gb-tag-payment {
-  border: none !important;
-  background: rgba(53, 152, 255, 0.10) !important;
-  color: var(--ec-blue) !important;
-  font-weight: 700;
-  font-size: 12px !important;
-}
-
-.gb-payment-amount {
-  color: #f5222d;
-  font-size: 18px;
-  font-weight: 800;
-  text-shadow: 0 0 10px rgba(245, 34, 45, 0.10);
-}
-
-.gb-qr-area {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-}
-
-.gb-qr-code {
-  border-radius: 12px;
-  padding: 12px;
-  border: 1px solid #f1f5f9;
-  background: #fff;
-}
-
-.gb-qr-hint {
-  font-size: 13px;
-}
-
-.gb-qr-raw {
-  font-size: 11px;
-  max-width: 500px;
-  word-break: break-all;
-}
-
-.gb-payment-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
 /* ── Group Buy Page Ant Overrides ── */
 
 .gb-page .ant-btn-primary {
@@ -2165,14 +2059,6 @@ pre {
   .gb-activity-grid {
     grid-template-columns: 1fr;
   }
-
-  .gb-settings-row {
-    gap: 14px;
-  }
-
-  .gb-setting-actions {
-    margin-left: 0;
-  }
 }
 
 @media (max-width: 600px) {
@@ -2188,8 +2074,9 @@ pre {
     font-size: 22px;
   }
 
-  .gb-settings-bar {
-    padding: 14px 16px;
+  .gb-notice {
+    padding: 12px 14px;
+    font-size: 12px;
   }
 
   .gb-activity-card {
