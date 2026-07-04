@@ -55,23 +55,25 @@ html {
   text-decoration: none;
 }
 
-.brand-mark {
-  display: grid;
-  width: 42px;
-  height: 42px;
-  place-items: center;
+.brand-mark-box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  background: #fff;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.2);
-  font-weight: 900;
 }
 
-.brand-link strong,
-.brand-link small {
-  display: block;
+.brand-mark {
+  width: 38px;
+  height: 38px;
+  object-fit: contain;
 }
 
-.brand-link small {
-  color: #cbd5e1;
+.brand-logo {
+  height: 24px;
+  width: auto;
+  object-fit: contain;
 }
 
 .nav-links {

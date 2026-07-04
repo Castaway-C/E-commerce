@@ -4,6 +4,8 @@ import { Link } from 'react-router-dom'
 
 import { authService } from '../services/auth'
 import { USER_AUTH_CHANGED_EVENT } from '../services/http'
+import mygoIcon from '../styles/MyGO_icon.svg'
+import logoMygo from '../styles/Logo_mygo.svg'
 
 export function AppShell({ children }: { children: ReactNode }) {
   const [loggedIn, setLoggedIn] = useState(() => authService.hasToken())
@@ -26,11 +28,8 @@ export function AppShell({ children }: { children: ReactNode }) {
     <>
       <nav className="app-nav">
         <Link className="brand-link" to="/">
-          <span className="brand-mark">IM</span>
-          <span>
-            <strong>一次买够</strong>
-            <small>用户商城</small>
-          </span>
+          <span className="brand-mark-box"><img className="brand-mark" src={mygoIcon} alt="MyGO" /></span>
+          <img className="brand-logo" src={logoMygo} alt="一次买够" />
         </Link>
         <div className="nav-links">
           <Link to="/">商城首页</Link>
