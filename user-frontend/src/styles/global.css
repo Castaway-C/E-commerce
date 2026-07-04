@@ -1,6 +1,6 @@
 :root {
   --page-bg: #f8fafc;
-  --nav-bg: #1e293b;
+  --nav-bg: #3598ff;
   --brand: #6366f1;
   --brand-dark: #4f46e5;
   --text: #1e293b;
@@ -61,7 +61,7 @@ html {
   height: 42px;
   place-items: center;
   border-radius: 12px;
-  background: linear-gradient(135deg, var(--brand), #a855f7);
+  background: rgba(255, 255, 255, 0.2);
   font-weight: 900;
 }
 
@@ -101,7 +101,7 @@ html {
 .nav-links a:hover,
 .nav-action:hover {
   color: #fff;
-  background: rgba(99, 102, 241, 0.34);
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .shop-page {
@@ -759,35 +759,28 @@ pre {
   margin: 0 auto;
 }
 
-.product-search-bar .ant-input-search-button {
-  height: 46px !important;
+.product-search-bar.ant-input-affix-wrapper {
+  display: flex;
+  align-items: center;
+  height: 46px;
   border: none;
-  border-radius: 0 23px 23px 0 !important;
-  background: var(--ec-blue) !important;
-  box-shadow: var(--ec-blue-glow-sm);
-  color: #fff;
-  font-weight: 700;
-  transition: box-shadow 0.2s;
-}
-
-.product-search-bar .ant-input-search-button:hover {
-  box-shadow: var(--ec-blue-glow);
-}
-
-.product-search-bar .ant-input-wrapper {
   border-radius: 23px;
+  padding: 0 16px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
 }
 
-.product-search-bar .ant-input {
-  height: 46px;
+.product-search-bar.ant-input-affix-wrapper .ant-input {
+  flex: 1;
+  height: 100%;
   border: none;
-  border-radius: 23px 0 0 23px !important;
-  padding-left: 22px;
+  outline: none;
+  box-shadow: none !important;
+  padding: 0;
   font-size: 15px;
+  background: transparent;
 }
 
-.product-search-bar .ant-input::placeholder {
+.product-search-bar.ant-input-affix-wrapper .ant-input::placeholder {
   color: #94a3b8;
 }
 

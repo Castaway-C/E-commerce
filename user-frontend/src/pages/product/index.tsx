@@ -130,14 +130,20 @@ export function ProductPage() {
         <div className="product-hero-inner">
           <h1 className="product-hero-title">发现好物</h1>
           <p className="product-hero-subtitle">品质生活，从这里开始</p>
-          <Input.Search
+          <Input
             size="large"
             allowClear
             placeholder="搜索你想要的商品…"
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
-            onSearch={() => loadProducts(categoryId, 1)}
+            onPressEnter={() => loadProducts(categoryId, 1)}
             className="product-search-bar"
+            suffix={
+              <SearchOutlined
+                style={{ color: '#3598ff', fontSize: 18, cursor: 'pointer' }}
+                onClick={() => loadProducts(categoryId, 1)}
+              />
+            }
           />
         </div>
       </div>
