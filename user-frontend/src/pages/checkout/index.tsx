@@ -4,19 +4,23 @@ import {
   Alert,
   Button,
   Card,
-  Descriptions,
+  Divider,
   Empty,
   InputNumber,
-  List,
   QRCode,
   Radio,
   Select,
-  Space,
   Spin,
   Tag,
   Typography,
 } from 'antd'
-import { FireOutlined, TeamOutlined } from '@ant-design/icons'
+import {
+  CreditCardOutlined,
+  EnvironmentOutlined,
+  FireOutlined,
+  ShoppingCartOutlined,
+  TeamOutlined,
+} from '@ant-design/icons'
 
 import { addressService, type Address } from '../../services/address'
 import { authService, type PointsAccount, type UserProfile } from '../../services/auth'
@@ -109,7 +113,6 @@ export function CheckoutPage() {
     setLoading(true)
     setMessage('')
     try {
-      // 拉取活动列表，再按 id/group_id 找出对应活动/团
       const activityResponse = await groupBuyService.listActivities()
       const allActivities = activityResponse.data ?? []
       let matchedActivity: GroupBuyActivity | null = null
@@ -122,7 +125,6 @@ export function CheckoutPage() {
           return
         }
       } else {
-        // join：遍历所有活动找匹配的 group
         for (const item of allActivities) {
           const found = item.active_groups.find((g) => g.id === groupBuyMode.groupId)
           if (found) {
@@ -140,7 +142,6 @@ export function CheckoutPage() {
       setActivity(matchedActivity)
       setGroup(matchedGroup)
 
-      // 并行加载地址、积分
       const [addressRes, profileRes, pointsRes] = await Promise.all([
         addressService.listAddresses(),
         authService.profile(),
@@ -277,7 +278,98 @@ export function CheckoutPage() {
     }
   }
 
-  // ===== Render: Group-buy mode =====
+  // ===== Shared render helpers =====
+  function renderAddressList(addressList: Address[]) {
+    if (addressList.length === 0) {
+      return (
+        <div className="checkout-empty-block">
+          <Text type="secondary">暂无收货地址，请先到个人中心新增地址。</Text>
+        </div>
+      )
+    }
+    return (
+      <Radio.Group
+        value={selectedAddressId ?? undefined}
+        onChange={(event) => setSelectedAddressId(event.target.value as number)}
+        className="checkout-address-list"
+      >
+        {addressList.map((address) => (
+          <Radio key={address.id} value={address.id} className="checkout-address-radio">
+            <div
+              className={`checkout-address-card ${selectedAddressId === address.id ? 'checkout-address-card-active' : ''}`}
+            >
+              <div className="checkout-address-row">
+                <div className="checkout-address-tags">
+                  <Tag className="checkout-tag-id">地址 #{address.id}</Tag>
+                  {address.is_default ? <Tag color="green">默认</Tag> : null}
+                  {address.address_tag ? <Tag>{address.address_tag}</Tag> : null}
+                </div>
+                <div className="checkout-address-user">
+                  <Text strong>{address.receiver_name}</Text>
+                  <Text type="secondary">{address.receiver_mobile}</Text>
+                </div>
+              </div>
+              <div className="checkout-address-detail">
+                {address.province}
+                {address.city}
+                {address.district ?? ''}
+                {address.street ?? ''}
+                {address.detail_address}
+              </div>
+            </div>
+          </Radio>
+        ))}
+      </Radio.Group>
+    )
+  }
+
+  function renderCheckoutResult() {
+    if (!createdInfo) return null
+    return (
+      <Card className="checkout-result-card">
+        <div className="checkout-result-body">
+          <div className="checkout-result-header">
+            <CreditCardOutlined className="checkout-result-icon" />
+            <div>
+              <Text strong className="checkout-result-title">
+                订单已提交
+              </Text>
+              <Text type="secondary" className="checkout-result-info">
+                {createdInfo}
+              </Text>
+            </div>
+          </div>
+          {paymentDetail ? (
+            <div className="checkout-payment-status">
+              <Tag color="blue">支付单 #{paymentDetail.id}</Tag>
+              <Tag color={statusColor(paymentDetail.status)}>{statusText(paymentDetail.status)}</Tag>
+              <Text className="checkout-result-price">
+                应付 ￥{yuan(paymentDetail.pay_amount_cent)}
+              </Text>
+              {paymentDetail.points_used > 0 ? (
+                <Text type="secondary">
+                  积分抵扣 ￥{yuan(paymentDetail.points_discount_amount_cent)}（{paymentDetail.points_used} 分）
+                </Text>
+              ) : null}
+            </div>
+          ) : null}
+          {visibleAlipayQrCode ? (
+            <div className="checkout-qr-area">
+              <QRCode value={visibleAlipayQrCode} size={180} />
+              <Text type="secondary" className="checkout-qr-hint">
+                请使用支付宝沙箱买家账号扫码付款
+              </Text>
+              <Text copyable type="secondary" className="checkout-qr-raw">
+                {visibleAlipayQrCode}
+              </Text>
+            </div>
+          ) : null}
+        </div>
+      </Card>
+    )
+  }
+
+  // ===== Group-buy mode render =====
   if (isGroupBuyMode) {
     const groupBuyReadyText = !authService.hasToken()
       ? '请先登录用户账号'
@@ -290,395 +382,333 @@ export function CheckoutPage() {
             : '可以提交拼团订单'
 
     return (
-      <main className="page-shell">
+      <div className="checkout-page">
         <Spin spinning={loading && !activity}>
-          <Space direction="vertical" size={24} style={{ width: '100%' }}>
-            <Card>
-              <Title level={3}>
-                {groupBuyMode?.kind === 'start' ? (
-                  <><FireOutlined /> 发起拼团</>
-                ) : (
-                  <><TeamOutlined /> 加入拼团</>
-                )}
-              </Title>
-              <Paragraph type="secondary">
-                选择收货地址、购买件数和积分抵扣后提交，将生成支付宝沙箱二维码。拼团不叠加满减或优惠券，可使用积分抵扣（受平台单笔上限约束）。
-              </Paragraph>
-              <Alert
-                type={activity ? 'success' : 'warning'}
-                showIcon
-                message={groupBuyReadyText}
-                description="首位用户支付后团有效期 24 小时；成团后订单进入商家待发货。"
-              />
-            </Card>
+          <header className="checkout-header">
+            <Title level={3} className="checkout-header-title">
+              {groupBuyMode?.kind === 'start' ? (
+                <><FireOutlined /> 发起拼团</>
+              ) : (
+                <><TeamOutlined /> 加入拼团</>
+              )}
+            </Title>
+            <Paragraph className="checkout-header-sub">
+              选择收货地址、购买件数和积分抵扣后提交，将生成支付宝沙箱二维码。拼团不叠加满减或优惠券。
+            </Paragraph>
+          </header>
 
-            {activity ? (
-              <>
-                <Card title="拼团活动" className="checkout-panel">
-                  <Space direction="vertical" size={12} style={{ width: '100%' }}>
-                    <Space wrap>
-                      <Tag className="gb-tag-id">拼团 #{activity.id}</Tag>
-                      <Tag className="gb-tag-group-size">
-                        <TeamOutlined /> {activity.group_size} 人团
+          <Alert
+            className="checkout-alert"
+            type={activity ? 'success' : 'warning'}
+            showIcon
+            message={groupBuyReadyText}
+            description="首位用户支付后团有效期 24 小时；成团后订单进入商家待发货。"
+          />
+
+          {activity ? (
+            <div className="checkout-layout">
+              <div className="checkout-left">
+                {/* Activity info */}
+                <Card className="checkout-card" title={<span className="checkout-card-title">拼团活动</span>}>
+                  <div className="checkout-gb-tags">
+                    <Tag className="gb-tag-id">拼团 #{activity.id}</Tag>
+                    <Tag className="gb-tag-group-size">
+                      <TeamOutlined /> {activity.group_size} 人团
+                    </Tag>
+                    <Tag color={statusColor(activity.status)}>{statusText(activity.status)}</Tag>
+                    {group ? (
+                      <Tag className="gb-tag-group-id">
+                        团 #{group.id} {group.joined_count}/{group.group_size} 人
                       </Tag>
-                      <Tag color={statusColor(activity.status)}>{statusText(activity.status)}</Tag>
-                      {group ? (
-                        <Tag className="gb-tag-group-id">
-                          团 #{group.id} {group.joined_count}/{group.group_size} 人
-                        </Tag>
-                      ) : null}
-                    </Space>
-                    <Text strong>{activity.name}</Text>
-                    <Text type="secondary">
-                      商品 #{activity.product_id} · SKU #{activity.sku_id}
-                    </Text>
-                    <Descriptions size="small" bordered column={1}>
-                      <Descriptions.Item label="拼团单价">
-                        <Text className="price">￥{yuan(activity.group_price_cent)}</Text>
-                      </Descriptions.Item>
-                      <Descriptions.Item label="购买件数">
-                        <InputNumber
-                          min={1}
-                          precision={0}
-                          value={groupQuantity}
-                          onChange={(value) => setGroupQuantity(Math.max(1, Number(value) || 1))}
-                        />
-                      </Descriptions.Item>
-                      <Descriptions.Item label="商品总额">
-                        ￥{yuan(groupTotalCent)}
-                      </Descriptions.Item>
-                      <Descriptions.Item label="积分抵扣">
-                        <InputNumber
-                          min={0}
-                          max={groupPointCap}
-                          precision={0}
-                          value={pointsToUse}
-                          addonAfter={`最多 ${groupPointCap}`}
-                          onChange={(value) => setPointsToUse(Number(value) || 0)}
-                        />
-                        <Text type="secondary" style={{ marginLeft: 8 }}>
-                          实际抵扣以后端核算为准
-                        </Text>
-                      </Descriptions.Item>
-                      <Descriptions.Item label="支付宝应付（提交后核算）">
-                        <Text type="secondary">提交订单后由后端计算</Text>
-                      </Descriptions.Item>
-                    </Descriptions>
-                    {activity.valid_to && (
-                      <Text type="secondary" style={{ fontSize: 12 }}>
-                        活动截止：{new Date(activity.valid_to).toLocaleString()}
-                      </Text>
-                    )}
-                  </Space>
-                </Card>
-
-                <Card title="收货地址">
-                  {addresses.length > 0 ? (
-                    <Radio.Group
-                      value={selectedAddressId ?? undefined}
-                      onChange={(event) => setSelectedAddressId(event.target.value as number)}
-                      style={{ width: '100%' }}
-                    >
-                      <Space direction="vertical" style={{ width: '100%' }}>
-                        {addresses.map((address) => (
-                          <Radio key={address.id} value={address.id} style={{ width: '100%' }}>
-                            <Space wrap size={4}>
-                              <Tag color="blue">地址 #{address.id}</Tag>
-                              {address.is_default ? <Tag color="green">默认</Tag> : null}
-                              {address.address_tag ? <Tag>{address.address_tag}</Tag> : null}
-                              <Text strong>{address.receiver_name}</Text>
-                              <Text>{address.receiver_mobile}</Text>
-                              <Text type="secondary">
-                                {address.province}
-                                {address.city}
-                                {address.district ?? ''}
-                                {address.street ?? ''}
-                                {address.detail_address}
-                              </Text>
-                            </Space>
-                          </Radio>
-                        ))}
-                      </Space>
-                    </Radio.Group>
-                  ) : (
-                    <Text type="secondary">暂无收货地址，请先到个人中心新增地址。</Text>
+                    ) : null}
+                  </div>
+                  <div className="checkout-gb-name">{activity.name}</div>
+                  <div className="checkout-gb-meta">
+                    商品 #{activity.product_id} · SKU #{activity.sku_id}
+                  </div>
+                  {activity.valid_to && (
+                    <div className="checkout-gb-deadline">
+                      活动截止：{new Date(activity.valid_to).toLocaleString()}
+                    </div>
                   )}
                 </Card>
 
-                <Card>
-                  <Space wrap>
+                {/* Address */}
+                <Card
+                  className="checkout-card"
+                  title={<span className="checkout-card-title"><EnvironmentOutlined /> 收货地址</span>}
+                >
+                  {renderAddressList(addresses)}
+                </Card>
+              </div>
+
+              <div className="checkout-right">
+                <div className="checkout-sticky">
+                  <Card
+                    className="checkout-card checkout-summary-card"
+                    title={<span className="checkout-card-title">金额明细</span>}
+                  >
+                    <div className="checkout-summary-row">
+                      <Text type="secondary">拼团单价</Text>
+                      <Text className="price">￥{yuan(activity.group_price_cent)}</Text>
+                    </div>
+                    <div className="checkout-summary-row">
+                      <Text type="secondary">购买件数</Text>
+                      <InputNumber
+                        min={1}
+                        precision={0}
+                        value={groupQuantity}
+                        onChange={(value) => setGroupQuantity(Math.max(1, Number(value) || 1))}
+                        className="checkout-qty-input"
+                      />
+                    </div>
+                    <div className="checkout-summary-row">
+                      <Text type="secondary">商品总额</Text>
+                      <Text>￥{yuan(groupTotalCent)}</Text>
+                    </div>
+                    <div className="checkout-summary-row checkout-points-row">
+                      <Text type="secondary">积分抵扣</Text>
+                      <InputNumber
+                        min={0}
+                        max={groupPointCap}
+                        precision={0}
+                        value={pointsToUse}
+                        addonAfter={`最多 ${groupPointCap}`}
+                        onChange={(value) => setPointsToUse(Number(value) || 0)}
+                        className="checkout-points-input"
+                      />
+                    </div>
+                    <Divider className="checkout-divider" />
+                    <div className="checkout-summary-row checkout-pay-row">
+                      <Text strong>支付宝应付</Text>
+                      <Text type="secondary">提交后核算</Text>
+                    </div>
                     <Button
                       type="primary"
+                      block
                       size="large"
                       loading={loading}
                       disabled={!activity || !selectedAddressId}
                       onClick={() => void handleSubmitGroupBuy()}
+                      className="btn-checkout-submit"
                     >
                       {groupBuyMode?.kind === 'start' ? '提交拼团并生成支付二维码' : '加入拼团并生成支付二维码'}
                     </Button>
-                    <Button onClick={() => navigate('/group-buy')}>返回拼团专区</Button>
-                    <Button onClick={() => navigate('/orders')}>查看订单</Button>
-                  </Space>
-                </Card>
-
-                {createdInfo ? (
-                  <Card title="下单结果">
-                    <Space direction="vertical" size={12} style={{ width: '100%' }}>
-                      <Text>{createdInfo}</Text>
-                      {paymentDetail ? (
-                        <Space wrap size={8}>
-                          <Tag color="blue">支付单 #{paymentDetail.id}</Tag>
-                          <Tag color={statusColor(paymentDetail.status)}>
-                            {statusText(paymentDetail.status)}
-                          </Tag>
-                          <Text className="price">应付 ￥{yuan(paymentDetail.pay_amount_cent)}</Text>
-                          <Text type="secondary">
-                            积分抵扣 ￥{yuan(paymentDetail.points_discount_amount_cent)}（{paymentDetail.points_used} 分）
-                          </Text>
-                        </Space>
-                      ) : null}
-                      {visibleAlipayQrCode ? (
-                        <Space direction="vertical" align="center" style={{ width: '100%' }}>
-                          <QRCode value={visibleAlipayQrCode} size={180} />
-                          <Text type="secondary">
-                            请使用支付宝沙箱买家账号扫码付款。二维码内容不是网页支付链接，直接在浏览器打开不会进入该订单支付。
-                          </Text>
-                          <Text copyable type="secondary">
-                            调试用订单码内容：{visibleAlipayQrCode}
-                          </Text>
-                        </Space>
-                      ) : null}
-                    </Space>
+                    <div className="checkout-back-actions">
+                      <Button onClick={() => navigate('/group-buy')}>返回拼团专区</Button>
+                      <Button onClick={() => navigate('/orders')}>查看订单</Button>
+                    </div>
                   </Card>
-                ) : null}
-              </>
-            ) : !loading ? (
-              <Card>
-                <Empty description={message || '拼团活动不存在或已结束。'} />
-              </Card>
-            ) : null}
+                </div>
+              </div>
+            </div>
+          ) : !loading ? (
+            <Card className="checkout-empty-card">
+              <Empty description={message || '拼团活动不存在或已结束。'} />
+            </Card>
+          ) : null}
 
-            {message ? (
-              <Card size="small">
-                <Text>{message}</Text>
-              </Card>
-            ) : null}
-          </Space>
+          {renderCheckoutResult()}
+
+          {message && !createdInfo ? (
+            <Card size="small" className="checkout-message-card">
+              <Text>{message}</Text>
+            </Card>
+          ) : null}
         </Spin>
-      </main>
+      </div>
     )
   }
 
-  // ===== Render: Cart checkout =====
-  async function handleSubmit() {
-    await handleSubmitCart()
-  }
-
+  // ===== Cart checkout render =====
   return (
-    <main className="page-shell">
+    <div className="checkout-page">
       <Spin spinning={loading && !checkout}>
-        <Space direction="vertical" size={24} style={{ width: '100%' }}>
-          <Card>
-            <Title level={3}>结算</Title>
-            <Paragraph type="secondary">
-              选择收货地址、满减、优惠券和积分抵扣后点击“重新计算”刷新应付金额，确认后提交订单并生成支付宝沙箱二维码。
-            </Paragraph>
-          </Card>
+        <header className="checkout-header">
+          <Title level={3} className="checkout-header-title">
+            <ShoppingCartOutlined /> 订单结算
+          </Title>
+          <Paragraph className="checkout-header-sub">
+            选择收货地址、满减、优惠券和积分抵扣后提交订单，将生成支付宝沙箱二维码。
+          </Paragraph>
+        </header>
 
-          {checkout ? (
-            <>
-              <Card title="结算预览" className="checkout-panel">
-                <Descriptions size="small" bordered column={1}>
-                  <Descriptions.Item label="商品总额">
-                    ￥{yuan(checkout.total_amount_cent)}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="满减抵扣">
-                    ￥{yuan(checkout.full_discount_amount_cent)}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="优惠券抵扣">
-                    ￥{yuan(checkout.coupon_discount_amount_cent)}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="积分抵扣">
-                    {checkout.points_used} 分 / ￥{yuan(checkout.points_discount_amount_cent)}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="总抵扣">
-                    ￥{yuan(checkout.discount_amount_cent)}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="支付宝应付">
-                    <Text className="price">￥{yuan(checkout.pay_amount_cent)}</Text>
-                  </Descriptions.Item>
-                </Descriptions>
+        {checkout ? (
+          <div className="checkout-layout">
+            <div className="checkout-left">
+              {/* Address */}
+              <Card
+                className="checkout-card"
+                title={<span className="checkout-card-title"><EnvironmentOutlined /> 收货地址</span>}
+              >
+                {renderAddressList(checkout.addresses)}
               </Card>
 
-              <Card title="收货地址">
-                {checkout.addresses.length > 0 ? (
-                  <Radio.Group
-                    value={selectedAddressId ?? undefined}
-                    onChange={(event) => setSelectedAddressId(event.target.value as number)}
-                    style={{ width: '100%' }}
-                  >
-                    <Space direction="vertical" style={{ width: '100%' }}>
-                      {checkout.addresses.map((address) => (
-                        <Radio key={address.id} value={address.id} style={{ width: '100%' }}>
-                          <Space wrap size={4}>
-                            <Tag color="blue">地址 #{address.id}</Tag>
-                            {address.is_default ? <Tag color="green">默认</Tag> : null}
-                            {address.address_tag ? <Tag>{address.address_tag}</Tag> : null}
-                            <Text strong>{address.receiver_name}</Text>
-                            <Text>{address.receiver_mobile}</Text>
-                            <Text type="secondary">
-                              {address.province}
-                              {address.city}
-                              {address.district ?? ''}
-                              {address.street ?? ''}
-                              {address.detail_address}
-                            </Text>
-                          </Space>
-                        </Radio>
-                      ))}
-                    </Space>
-                  </Radio.Group>
+              {/* Items */}
+              <Card className="checkout-card" title={<span className="checkout-card-title">商品明细</span>}>
+                {checkout.items.length === 0 ? (
+                  <Empty description="暂无可结算商品" image={Empty.PRESENTED_IMAGE_SIMPLE} />
                 ) : (
-                  <Text type="secondary">暂无收货地址，可先到用户首页新增地址。当前阶段仍允许无地址下单。</Text>
+                  <div className="checkout-item-list">
+                    {checkout.items.map((item) => (
+                      <div key={item.sku_id} className="checkout-item-card">
+                        <div className="checkout-item-info">
+                          <div className="checkout-item-name">{item.product_name}</div>
+                          <div className="checkout-item-meta">
+                            <Tag className="checkout-tag-sku">SKU #{item.sku_id}</Tag>
+                            <Tag>{item.sku_name}</Tag>
+                          </div>
+                          {(item.source_label || item.source_post_id) && (
+                            <div className="checkout-item-source">
+                              {item.source_label ? (
+                                <Tag color="purple">{item.source_label}</Tag>
+                              ) : null}
+                              {item.source_post_id ? (
+                                <Tag color="purple">种草来源 #{item.source_post_id}</Tag>
+                              ) : null}
+                            </div>
+                          )}
+                        </div>
+                        <div className="checkout-item-right">
+                          <Text className="checkout-item-price">￥{yuan(item.price_cent)}</Text>
+                          <Text type="secondary" className="checkout-item-qty">x{item.quantity}</Text>
+                          <Text className="checkout-item-total price">
+                            ￥{yuan(item.price_cent * item.quantity)}
+                          </Text>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </Card>
+            </div>
 
-              <Card title="优惠与积分">
-                <Space direction="vertical" size={16} style={{ width: '100%' }}>
-                  <div>
-                    <Text strong>满减活动</Text>
+            <div className="checkout-right">
+              <div className="checkout-sticky">
+                <Card
+                  className="checkout-card checkout-summary-card"
+                  title={<span className="checkout-card-title">结算明细</span>}
+                >
+                  {/* Full discount */}
+                  <div className="checkout-promo-row">
+                    <Text type="secondary">满减活动</Text>
                     <Select
                       allowClear
-                      placeholder="选择本单满减活动"
-                      style={{ width: '100%', marginTop: 8 }}
+                      placeholder="选择满减"
                       value={selectedFullDiscountId}
-                      onChange={(value: number | undefined) => setSelectedFullDiscountId(value)}
+                      onChange={(value: number | undefined) => {
+                        setSelectedFullDiscountId(value)
+                      }}
                       options={[
                         { value: undefined, label: '不使用满减' },
                         ...checkout.available_full_discounts.map((activity) => ({
                           value: activity.id,
                           disabled: !activity.available,
-                          label: `#${activity.id} ${activity.name}｜适用 ￥${yuan(activity.applicable_amount_cent)}｜减 ￥${yuan(activity.discount_amount_cent)}${activity.available ? '' : `｜${activity.unavailable_reason ?? '不可用'}`}`,
+                          label: `#${activity.id} ${activity.name}｜减 ￥${yuan(activity.discount_amount_cent)}${activity.available ? '' : `｜${activity.unavailable_reason ?? '不可用'}`}`,
                         })),
                       ]}
+                      className="checkout-promo-select"
                     />
                   </div>
-
-                  <div>
-                    <Text strong>优惠券</Text>
+                  <div className="checkout-promo-row">
+                    <Text type="secondary">优惠券</Text>
                     <Select
                       allowClear
-                      placeholder="选择本单优惠券"
-                      style={{ width: '100%', marginTop: 8 }}
+                      placeholder="选择优惠券"
                       value={selectedUserCouponId}
-                      onChange={(value: number | undefined) => setSelectedUserCouponId(value)}
+                      onChange={(value: number | undefined) => {
+                        setSelectedUserCouponId(value)
+                      }}
                       options={[
                         { value: undefined, label: '不使用优惠券' },
                         ...checkout.available_coupons.map((coupon) => ({
                           value: coupon.id,
                           disabled: !coupon.available,
-                          label: `#${coupon.id} ${coupon.name}｜适用 ￥${yuan(coupon.applicable_amount_cent)}｜减 ￥${yuan(coupon.discount_amount_cent)}${coupon.available ? '' : `｜${coupon.unavailable_reason ?? '不可用'}`}`,
+                          label: `#${coupon.id} ${coupon.name}｜减 ￥${yuan(coupon.discount_amount_cent)}${coupon.available ? '' : `｜${coupon.unavailable_reason ?? '不可用'}`}`,
                         })),
                       ]}
+                      className="checkout-promo-select"
                     />
                   </div>
 
-                  <div>
-                    <Text strong>积分抵扣</Text>
+                  <Divider className="checkout-divider" />
+
+                  <div className="checkout-summary-row">
+                    <Text type="secondary">商品总额</Text>
+                    <Text>￥{yuan(checkout.total_amount_cent)}</Text>
+                  </div>
+                  <div className="checkout-summary-row">
+                    <Text type="secondary">满减抵扣</Text>
+                    <Text className="checkout-deduct">-￥{yuan(checkout.full_discount_amount_cent)}</Text>
+                  </div>
+                  <div className="checkout-summary-row">
+                    <Text type="secondary">优惠券抵扣</Text>
+                    <Text className="checkout-deduct">-￥{yuan(checkout.coupon_discount_amount_cent)}</Text>
+                  </div>
+                  <div className="checkout-summary-row checkout-points-row">
+                    <Text type="secondary">积分抵扣</Text>
                     <InputNumber
-                      style={{ width: '100%', marginTop: 8 }}
                       min={0}
                       max={checkout.max_points_usable}
                       precision={0}
                       value={pointsToUse}
                       addonAfter={`最多 ${checkout.max_points_usable}`}
                       onChange={(value) => setPointsToUse(Number(value) || 0)}
+                      className="checkout-points-input"
                     />
                   </div>
+                  <div className="checkout-summary-row">
+                    <Text type="secondary">总抵扣</Text>
+                    <Text className="checkout-deduct">-￥{yuan(checkout.discount_amount_cent)}</Text>
+                  </div>
+                  <Divider className="checkout-divider" />
+                  <div className="checkout-summary-row checkout-pay-row">
+                    <Text strong>支付宝应付</Text>
+                    <Text className="checkout-pay-amount price">
+                      ￥{yuan(checkout.pay_amount_cent)}
+                    </Text>
+                  </div>
 
-                  <Space wrap>
-                    <Button onClick={() => void loadCheckout()} loading={loading}>
-                      重新计算
-                    </Button>
-                    <Button
-                      type="primary"
-                      size="large"
-                      disabled={checkout.items.length === 0}
-                      loading={loading}
-                      onClick={() => void handleSubmit()}
-                    >
-                      提交订单并生成支付宝二维码
-                    </Button>
-                    <Button onClick={() => navigate('/orders')}>查看订单</Button>
-                  </Space>
-                </Space>
-              </Card>
-
-              <Card title="商品明细">
-                <List
-                  size="small"
-                  dataSource={checkout.items}
-                  locale={{ emptyText: <Empty description="暂无可结算商品" /> }}
-                  renderItem={(item) => (
-                    <List.Item>
-                      <Space wrap>
-                        <Tag>SKU #{item.sku_id}</Tag>
-                        <Text strong>{item.product_name}</Text>
-                        <Text type="secondary">{item.sku_name}</Text>
-                        <Text>x{item.quantity}</Text>
-                        {item.source_label || item.source_post_id ? (
-                          <Tag color="purple">
-                            {item.source_label ?? `种草来源 #${item.source_post_id}`}
-                          </Tag>
-                        ) : null}
-                      </Space>
-                      <Text className="price">￥{yuan(item.price_cent * item.quantity)}</Text>
-                    </List.Item>
-                  )}
-                />
-              </Card>
-
-              {createdInfo ? (
-                <Card title="下单结果">
-                  <Space direction="vertical" size={12} style={{ width: '100%' }}>
-                    <Text>{createdInfo}</Text>
-                    {paymentDetail ? (
-                      <Space wrap size={8}>
-                        <Tag color="blue">支付单 #{paymentDetail.id}</Tag>
-                        <Tag color={statusColor(paymentDetail.status)}>
-                          {statusText(paymentDetail.status)}
-                        </Tag>
-                        <Text className="price">应付 ￥{yuan(paymentDetail.pay_amount_cent)}</Text>
-                      </Space>
-                    ) : null}
-                    {visibleAlipayQrCode ? (
-                      <Space direction="vertical" align="center" style={{ width: '100%' }}>
-                        <QRCode value={visibleAlipayQrCode} size={180} />
-                        <Text type="secondary">
-                          请使用支付宝沙箱买家账号扫码付款。二维码内容不是网页支付链接，直接在浏览器打开不会进入该订单支付。
-                        </Text>
-                        <Text copyable type="secondary">
-                          调试用订单码内容：{visibleAlipayQrCode}
-                        </Text>
-                      </Space>
-                    ) : null}
-                  </Space>
+                  <Button
+                    type="primary"
+                    block
+                    size="large"
+                    disabled={checkout.items.length === 0}
+                    loading={loading}
+                    onClick={() => void handleSubmitCart()}
+                    className="btn-checkout-submit"
+                  >
+                    提交订单并生成支付宝二维码
+                  </Button>
+                  <Button
+                    onClick={() => void loadCheckout()}
+                    loading={loading}
+                    block
+                    className="checkout-recalc-btn"
+                  >
+                    重新计算优惠与积分
+                  </Button>
+                  <Button onClick={() => navigate('/orders')} block>
+                    查看订单
+                  </Button>
                 </Card>
-              ) : null}
-            </>
-          ) : (
-            <Card>
-              <Empty description={message || '暂无可结算商品，请先在购物车勾选有效商品。'} />
-            </Card>
-          )}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <Card className="checkout-empty-card">
+            <Empty description={message || '暂无可结算商品，请先在购物车勾选有效商品。'} />
+          </Card>
+        )}
 
-          {message ? (
-            <Card size="small">
-              <Text>{message}</Text>
-            </Card>
-          ) : null}
-        </Space>
+        {renderCheckoutResult()}
+
+        {message && !createdInfo ? (
+          <Card size="small" className="checkout-message-card">
+            <Text>{message}</Text>
+          </Card>
+        ) : null}
       </Spin>
-    </main>
+    </div>
   )
 }

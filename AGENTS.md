@@ -81,7 +81,7 @@
 - 用户端页面各司其责（2026-07-04 起）：
   - 拼团专区页 `/group-buy`：只列出活动和可加入的团，点击「发起拼团」跳转 `/checkout?group_buy=<activityId>`，点击「加入此团」跳转 `/checkout?group_join=<groupId>`，不再在拼团页选地址/件数/积分或显示支付二维码。
   - 购物车页 `/cart`：只管理商品（勾选/数量/删除/清失效），点击「去结算」跳转 `/checkout`。
-  - 结算页 `/checkout`：统一处理收货地址、购买件数、满减、优惠券、积分、支付宝沙箱二维码，兼容三种入口——购物车（默认）、发起拼团（`?group_buy=<activityId>`）、加入拼团（`?group_join=<groupId>`）。拼团模式不展示满减/优惠券选项，提交时调用 `groupBuyService.startGroup`/`joinGroup`；购物车模式调用 `orderService.createOrder`。
+  - 结算页 `/checkout`：统一处理收货地址、购买件数、满减、优惠券、积分、支付宝沙箱二维码，兼容三种入口——购物车（默认）、发起拼团（`?group_buy=<activityId>`）、加入拼团（`?group_join=<groupId>`）。拼团模式不展示满减/优惠券选项，提交时调用 `groupBuyService.startGroup`/`joinGroup`；购物车模式调用 `orderService.createOrder`。页面采用左右分栏布局：左侧显示地址选择卡片 + 商品/活动明细卡片，右侧为 sticky 结算明细卡片（金额汇总、优惠选择、提交按钮），参考购物车和订单页的卡片风格。
   - 订单页 `/orders`：只查看/管理订单（支付/收货/评价/售后），不再选地址或促销。
 - 有 ID 或需要通过 ID 操作的内容，必须在业务区直接展示 ID。
 - 需要批量输入 ID 或标签的表单，应统一兼容中文逗号、英文逗号、分号和空白分隔；能用选择器的商品选择不要要求手输商品 ID。
