@@ -693,7 +693,7 @@ pre {
    ============================================= */
 
 .product-page {
-  max-width: 1360px;
+  max-width: 1440px;
   margin: 0 auto;
   padding: 0 24px 48px;
 }
@@ -712,7 +712,7 @@ pre {
 .product-hero-bg {
   position: absolute;
   inset: 0;
-  background: url('/src/styles/bg.webp') center / cover no-repeat;
+  background: url('/src/styles/bg1.webp') center / cover no-repeat;
   z-index: 0;
 }
 
@@ -1198,7 +1198,7 @@ pre {
    ============================================= */
 
 .detail-page {
-  max-width: 1200px;
+  max-width: 1440px;
   margin: 0 auto;
   padding: 16px 24px 48px;
 }
@@ -1675,7 +1675,7 @@ pre {
    ============================================= */
 
 .gb-page {
-  max-width: 1200px;
+  max-width: 1440px;
   margin: 0 auto;
   padding: 0 24px 48px;
 }
@@ -2227,7 +2227,7 @@ pre {
    ============================================= */
 
 .order-page {
-  max-width: 960px;
+  max-width: 1440px;
   margin: 0 auto;
   padding: 0 24px 48px;
 }
@@ -2692,7 +2692,7 @@ pre {
    ============================================= */
 
 .comm-page {
-  max-width: 1200px;
+  max-width: 1440px;
   margin: 0 auto;
   padding: 0 24px 48px;
 }
@@ -3303,7 +3303,7 @@ pre {
    ============================================= */
 
 .addr-page {
-  max-width: 900px;
+  max-width: 1440px;
   margin: 0 auto;
   padding: 0 24px 48px;
 }
@@ -3813,7 +3813,7 @@ pre {
    ============================================= */
 
 .uc-page {
-  max-width: 960px;
+  max-width: 1440px;
   margin: 0 auto;
   padding: 0 24px 48px;
 }
@@ -4742,7 +4742,7 @@ pre {
    ============================================= */
 
 .shop-page {
-  max-width: 1200px;
+  max-width: 1440px;
   margin: 0 auto;
   padding: 0 24px 48px;
 }
