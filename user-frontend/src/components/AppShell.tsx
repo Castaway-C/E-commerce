@@ -35,6 +35,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <Link to="/">商城首页</Link>
           <Link to="/products">商品</Link>
           <Link to="/group-buy">拼团专区</Link>
+          <Link to="/cart">购物车</Link>
           <Link to="/orders">订单</Link>
           <Link to="/community">社区</Link>
         </div>

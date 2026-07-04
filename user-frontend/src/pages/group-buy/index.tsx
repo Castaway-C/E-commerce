@@ -213,15 +213,16 @@ export function GroupBuyPage() {
             <div className="gb-hero-badge"><FireOutlined /> 拼团专区</div>
             <h1 className="gb-hero-title">拼着买，更划算</h1>
             <p className="gb-hero-subtitle">邀请好友一起拼，专享超低拼团价</p>
-            <Alert
-              className="gb-hero-alert"
-              type={authService.hasToken() && selectedAddressBelongsToUser ? 'success' : 'warning'}
-              showIcon
-              message={groupBuyReadyText}
-              description="拼团不叠加满减或优惠券，不参与种草奖励；可使用积分抵扣。首位用户支付后团有效期 24 小时。"
-            />
           </div>
         </div>
+
+        <Alert
+          className="gb-hero-alert"
+          type={authService.hasToken() && selectedAddressBelongsToUser ? 'success' : 'warning'}
+          showIcon
+          message={groupBuyReadyText}
+          description="拼团不叠加满减或优惠券，不参与种草奖励；可使用积分抵扣。首位用户支付后团有效期 24 小时。"
+        />
 
         {/* ── Order Settings Bar ── */}
         <div className="gb-settings-bar">
