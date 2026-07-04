@@ -521,15 +521,9 @@ export function UserCenterPage() {
                       <span className="uc-points-value">{pointsAccount.today_reward_points}</span>
                       <span className="uc-points-label">今日签到奖励</span>
                     </div>
-                    <div className="uc-points-item uc-points-action">
-                      <Button
-                        type="primary"
-                        disabled={pointsAccount.sign_in_today}
-                        onClick={() => void signIn()}
-                        className="btn-uc-primary"
-                      >
-                        {pointsAccount.sign_in_today ? '今日已签到' : '立即签到'}
-                      </Button>
+                    <div className="uc-points-item">
+                      <span className="uc-points-value">{pointsAccount.sign_in_today ? '已完成' : '待完成'}</span>
+                      <span className="uc-points-label">今日签到</span>
                     </div>
                   </div>
                 ) : (

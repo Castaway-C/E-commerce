@@ -7,7 +7,6 @@ import { CartPage } from '../pages/cart'
 import { CheckoutPage } from '../pages/checkout'
 import { CommunityPage } from '../pages/community'
 import { GroupBuyPage } from '../pages/group-buy'
-import { HomePage } from '../pages/home'
 import { MerchantPage } from '../pages/merchant'
 import { OrderPage } from '../pages/order'
 import { ProductDetailPage } from '../pages/product/detail'
@@ -17,10 +16,10 @@ import { UserCenterPage } from '../pages/user'
 export function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<HomePage />} />
+      <Route path="/" element={<ProductPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
-      <Route path="/products" element={<ProductPage />} />
+      <Route path="/products" element={<Navigate to="/" replace />} />
       <Route path="/products/:productId" element={<ProductDetailPage />} />
       <Route path="/group-buy" element={<GroupBuyPage />} />
       <Route path="/cart" element={<CartPage />} />

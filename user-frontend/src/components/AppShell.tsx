@@ -1,19 +1,39 @@
 import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { Avatar } from 'antd'
 
-import { authService } from '../services/auth'
+import { authService, type UserProfile } from '../services/auth'
 import { USER_AUTH_CHANGED_EVENT } from '../services/http'
+import { absoluteAssetUrl } from '../utils/format'
 import mygoIcon from '../styles/MyGO_icon.svg'
 import logoMygo from '../styles/Logo_mygo.svg'
 
 export function AppShell({ children }: { children: ReactNode }) {
   const [loggedIn, setLoggedIn] = useState(() => authService.hasToken())
+  const [profile, setProfile] = useState<UserProfile | null>(null)
+
+  async function loadProfile() {
+    if (!authService.hasToken()) {
+      setProfile(null)
+      return
+    }
+    try {
+      const response = await authService.profile()
+      setProfile(response.data)
+    } catch {
+      setProfile(null)
+    }
+  }
 
   useEffect(() => {
-    const updateLoggedIn = () => setLoggedIn(authService.hasToken())
+    const updateLoggedIn = () => {
+      setLoggedIn(authService.hasToken())
+      void loadProfile()
+    }
     window.addEventListener(USER_AUTH_CHANGED_EVENT, updateLoggedIn)
     window.addEventListener('storage', updateLoggedIn)
+    void loadProfile()
     return () => {
       window.removeEventListener(USER_AUTH_CHANGED_EVENT, updateLoggedIn)
       window.removeEventListener('storage', updateLoggedIn)
@@ -32,8 +52,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <img className="brand-logo" src={logoMygo} alt="一次买够" />
         </Link>
         <div className="nav-links">
-          <Link to="/">商城首页</Link>
-          <Link to="/products">商品</Link>
+          <Link to="/">首页</Link>
           <Link to="/group-buy">拼团专区</Link>
           <Link to="/cart">购物车</Link>
           <Link to="/orders">订单</Link>
@@ -42,7 +61,16 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="nav-links nav-auth">
           {loggedIn ? (
             <>
-              <Link to="/user">我的账号</Link>
+              <Link to="/user" className="nav-user-link">
+                <Avatar
+                  size={28}
+                  src={absoluteAssetUrl(profile?.avatar_url ?? '') || undefined}
+                  className="nav-user-avatar"
+                >
+                  {profile?.nickname?.slice(0, 1) ?? 'U'}
+                </Avatar>
+                <span className="nav-user-name">{profile?.nickname ?? '我的账号'}</span>
+              </Link>
               <button type="button" className="nav-action" onClick={logout}>退出</button>
             </>
           ) : (
