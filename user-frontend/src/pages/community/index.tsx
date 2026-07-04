@@ -4,7 +4,6 @@ import {
   Button,
   Card,
   Divider,
-  Drawer,
   Empty,
   Image,
   Input,
@@ -26,6 +25,7 @@ import {
   MessageOutlined,
   PlusOutlined,
   ReloadOutlined,
+  TeamOutlined,
 } from '@ant-design/icons'
 
 import {
@@ -395,6 +395,16 @@ export function CommunityPage() {
 
   return (
     <div className="comm-page">
+      {/* ── Page Header ── */}
+      <header className="comm-header">
+        <Title level={3} className="comm-header-title">
+          <TeamOutlined /> 社区
+        </Title>
+        <Paragraph className="comm-header-sub">
+          发现好物、分享体验、加入种草与讨论
+        </Paragraph>
+      </header>
+
       {/* ── Top Bar: Section Tabs + Actions ── */}
       <div className="comm-topbar">
         <div className="comm-topbar-inner">
@@ -539,13 +549,15 @@ export function CommunityPage() {
         )}
       </div>
 
-      {/* ── Post Detail Drawer ── */}
-      <Drawer
+      {/* ── Post Detail Modal ── */}
+      <Modal
         open={!!selectedPost}
-        width={560}
         title={selectedPost?.title}
-        onClose={() => setSelectedPost(null)}
-        className="comm-drawer"
+        onCancel={() => setSelectedPost(null)}
+        footer={null}
+        width={720}
+        centered
+        className="comm-post-modal"
       >
         {selectedPost ? (
           <div className="comm-detail">
@@ -664,7 +676,7 @@ export function CommunityPage() {
             </div>
           </div>
         ) : null}
-      </Drawer>
+      </Modal>
 
       {/* ── Create Post Modal ── */}
       <Modal

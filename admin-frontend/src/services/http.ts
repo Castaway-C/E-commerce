@@ -1,4 +1,4 @@
-import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios'
+import axios from 'axios'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000/api/v1'
 type AdminSession = 'platform' | 'merchant'
@@ -16,6 +16,10 @@ type ApiResponse<T> = {
   data: T
 }
 
+type AxiosError = axios.AxiosError
+type InternalAxiosRequestConfig = axios.InternalAxiosRequestConfig
+type AxiosResponse = axios.AxiosResponse
+
 type AdminRequestConfig = InternalAxiosRequestConfig & {
   _retry?: boolean
   _adminSession?: AdminSession
@@ -26,7 +30,7 @@ export const http = axios.create({
   timeout: 10000,
 })
 
-http.interceptors.request.use((config) => {
+http.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   const session: AdminSession = config.headers?.['X-Admin-Session'] === 'merchant' ? 'merchant' : 'platform'
   ;(config as AdminRequestConfig)._adminSession = session
   delete config.headers?.['X-Admin-Session']
@@ -38,7 +42,7 @@ http.interceptors.request.use((config) => {
 })
 
 http.interceptors.response.use(
-  (response) => response.data,
+  (response: AxiosResponse) => response.data,
   async (error: AxiosError) => {
     const originalConfig = error.config as AdminRequestConfig | undefined
     const status = error.response?.status

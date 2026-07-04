@@ -50,6 +50,11 @@ export function formatError(error: unknown) {
   return error instanceof Error ? error.message : error
 }
 
+export function assetUrl(url?: string | null) {
+  if (!url) return undefined
+  return /^https?:\/\//.test(url) ? url : `http://localhost:8000${url}`
+}
+
 export function statusText(status?: string) {
   const map: Record<string, string> = {
     pending: '待审核',

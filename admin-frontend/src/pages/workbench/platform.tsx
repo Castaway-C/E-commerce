@@ -1,3 +1,6 @@
+// DEPRECATED: 页面已拆分为 src/pages/admin/* 和 src/pages/merchant/* 下的独立页面。
+// 保留此文件仅作为历史参考，不再被路由引用。
+
 import {
   Button,
   Card,

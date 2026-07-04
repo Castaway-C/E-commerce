@@ -1,6 +1,6 @@
 import { FormEvent, useState } from 'react'
 
-import { adminProductService } from '../../services/product'
+import { adminProductService, type ProductDetail, type StockLog } from '../../services/product'
 
 export function ProductAdminPage() {
   const [merchantName, setMerchantName] = useState('')
@@ -99,7 +99,7 @@ export function ProductAdminPage() {
       const response = publish
         ? await adminProductService.batchPublish(ids)
         : await adminProductService.batchUnpublish(ids)
-      setMessage(`批量操作完成：${response.data.map((item) => `${item.id}:${item.status}`).join('，')}`)
+      setMessage(`批量操作完成：${response.data.map((item: ProductDetail) => `${item.id}:${item.status}`).join('，')}`)
     } catch {
       setMessage('批量操作失败，请检查商品ID和权限')
     }
