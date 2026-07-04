@@ -712,7 +712,7 @@ pre {
 .product-hero-bg {
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, #1a3a6b 0%, #0f2440 50%, #1a2a4a 100%);
+  background: url('/src/styles/bg.webp') center / cover no-repeat;
   z-index: 0;
 }
 
@@ -4183,6 +4183,12 @@ pre {
 .uc-points-action {
   background: rgba(53, 152, 255, 0.05);
   justify-content: center;
+}
+
+.uc-points-action .ant-btn-primary {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
 }
 
 /* ── Member Level ── */
