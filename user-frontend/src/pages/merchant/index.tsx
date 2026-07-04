@@ -1,6 +1,15 @@
-import { Button, Card, Col, Drawer, Empty, Image, InputNumber, Row, Select, Skeleton, Space, Statistic, Tag, Typography, message } from 'antd'
+import { Button, Card, Drawer, Empty, Image, InputNumber, Select, Skeleton, Space, Tag, Typography, message } from 'antd'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import {
+  ShopOutlined,
+  HeartOutlined,
+  HeartFilled,
+  GiftOutlined,
+  ReloadOutlined,
+  ShoppingCartOutlined,
+  EnvironmentOutlined,
+} from '@ant-design/icons'
 
 import { orderService } from '../../services/order'
 import {
@@ -11,26 +20,9 @@ import {
   type ProductListItem,
 } from '../../services/product'
 import { promotionService, type CouponTemplate } from '../../services/promotion'
+import { absoluteAssetUrl, pickErrorMessage, yuan } from '../../utils/format'
 
-const { Title, Text, Paragraph } = Typography
-
-function yuan(valueCent?: number | null) {
-  return ((valueCent ?? 0) / 100).toFixed(2)
-}
-
-function absoluteAssetUrl(url?: string | null) {
-  if (!url) return undefined
-  if (/^https?:\/\//.test(url)) return url
-  return `http://localhost:8000${url}`
-}
-
-function pickErrorMessage(error: unknown) {
-  if (error && typeof error === 'object' && 'response' in error) {
-    const response = (error as { response?: { data?: { message?: string } } }).response
-    return response?.data?.message
-  }
-  return undefined
-}
+const { Text, Paragraph } = Typography
 
 export function MerchantPage() {
   const { merchantId } = useParams()
@@ -157,242 +149,293 @@ export function MerchantPage() {
 
   if (!Number.isFinite(numericMerchantId) || numericMerchantId <= 0) {
     return (
-      <main className="shop-page">
-        <Card>
-          <Empty description="店铺 ID 不正确" />
-        </Card>
-      </main>
+      <div className="shop-page">
+        <Empty description="店铺 ID 不正确" style={{ padding: '80px 0' }} />
+      </div>
     )
   }
 
   return (
-    <main className="shop-page">
-      <section className="shop-hero merchant-hero">
-        <Skeleton loading={loading && !merchant} active>
-          <Space size={24} align="center" wrap>
-            {merchant?.logo_url ? (
-              <Image width={88} height={88} preview={false} src={absoluteAssetUrl(merchant.logo_url)} className="merchant-logo" />
-            ) : (
-              <div className="merchant-logo-placeholder">店</div>
-            )}
-            <Space direction="vertical" size={8}>
-              <Text className="eyebrow">店铺主页</Text>
-              <Title level={1} style={{ margin: 0 }}>{merchant?.name ?? `店铺 #${numericMerchantId}`}</Title>
-              <Space wrap>
-                <Tag color="purple">店铺 ID #{numericMerchantId}</Tag>
-                <Tag color="blue">在售商品 {total}</Tag>
-                <Tag color="geekblue">关注 {followStatus?.follower_count ?? 0}</Tag>
-              </Space>
-              <Paragraph style={{ margin: 0 }}>
-                {merchant?.announcement || '店铺暂未填写公告，后续可扩展店铺介绍、客服入口、店铺活动和关注能力。'}
-              </Paragraph>
-              <Button type={followStatus?.followed ? 'default' : 'primary'} onClick={toggleFollow}>
-                {followStatus?.followed ? '已关注，点击取消' : '关注店铺'}
-              </Button>
-            </Space>
-          </Space>
-        </Skeleton>
-      </section>
-
-      <Row gutter={[24, 24]}>
-        <Col span={6}>
-          <Space direction="vertical" size={16} style={{ width: '100%' }}>
-            <Card title="店铺筛选">
-              <Space direction="vertical" size={16} style={{ width: '100%' }}>
-                <Statistic title="商品总数" value={total} />
-                <InputNumber
-                  style={{ width: '100%' }}
-                  min={0}
-                  precision={2}
-                  placeholder="最低价"
-                  addonAfter="元"
-                  value={minPriceYuan}
-                  onChange={setMinPriceYuan}
-                />
-                <InputNumber
-                  style={{ width: '100%' }}
-                  min={0}
-                  precision={2}
-                  placeholder="最高价"
-                  addonAfter="元"
-                  value={maxPriceYuan}
-                  onChange={setMaxPriceYuan}
-                />
-                <Select
-                  style={{ width: '100%' }}
-                  value={sort}
-                  onChange={setSort}
-                  options={[
-                    { value: 'newest:desc', label: '最新上架' },
-                    { value: 'price:asc', label: '价格升序' },
-                    { value: 'price:desc', label: '价格降序' },
-                    { value: 'sales:desc', label: '销量优先' },
-                  ]}
-                />
-                <Button type="primary" block onClick={loadMerchant}>查询店铺商品</Button>
-                <Link to="/">
-                  <Button block>返回商城首页</Button>
-                </Link>
-              </Space>
-            </Card>
-
-            <Card title="店铺优惠券" extra={<Button size="small" onClick={loadCoupons}>刷新</Button>}>
-              <Space direction="vertical" size={10} style={{ width: '100%' }}>
-                {coupons.length === 0 ? (
-                  <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无可领取优惠券" />
-                ) : coupons.map((coupon) => {
-                  const leftCount = coupon.total_quantity === 0 ? '不限' : coupon.total_quantity - coupon.claimed_quantity
-                  return (
-                    <Card size="small" key={coupon.id} className="coupon-mini-card">
-                      <Space direction="vertical" size={6} style={{ width: '100%' }}>
-                        <Space wrap>
-                          <Tag color={coupon.scope_type === 'merchant' ? 'purple' : 'blue'}>
-                            {coupon.scope_type === 'merchant' ? '本店可用' : '平台通用'}
-                          </Tag>
-                          <Tag>券 #{coupon.id}</Tag>
-                        </Space>
-                        <Text strong>{coupon.name}</Text>
-                        <Text className="price">满 ￥{yuan(coupon.min_amount_cent)} 减 ￥{yuan(coupon.discount_value)}</Text>
-                        <Text type="secondary">剩余 {leftCount} / 每人限领 {coupon.per_user_limit}</Text>
-                        <Button
-                          type="primary"
-                          block
-                          disabled={coupon.total_quantity !== 0 && coupon.claimed_quantity >= coupon.total_quantity}
-                          onClick={() => claimCoupon(coupon.id)}
-                        >
-                          领取
-                        </Button>
-                      </Space>
-                    </Card>
-                  )
-                })}
-              </Space>
-            </Card>
-          </Space>
-        </Col>
-
-        <Col span={18}>
-          <Card
-            title="店铺商品"
-            extra={<Button onClick={loadMerchant}>刷新</Button>}
-          >
-            <Skeleton loading={loading} active>
-              {products.length === 0 ? (
-                <Empty description="当前店铺暂无符合条件的在售商品" />
+    <div className="shop-page">
+      {/* ── Shop Hero Banner ── */}
+      <div className="shop-hero">
+        <div className="shop-hero-bg" />
+        <div className="shop-hero-content">
+          <Skeleton loading={loading && !merchant} active avatar={{ size: 72 }}>
+            <div className="shop-hero-left">
+              {merchant?.logo_url ? (
+                <img className="shop-logo" src={absoluteAssetUrl(merchant.logo_url)} alt={merchant.name} />
               ) : (
-                <Row gutter={[16, 16]}>
-                  {products.map((product) => (
-                    <Col span={8} key={product.id}>
-                      <Card
-                        hoverable
-                        className="product-card"
-                        cover={
-                          product.cover_url ? (
-                            <Image preview={false} src={absoluteAssetUrl(product.cover_url)} />
-                          ) : (
-                            <div className="product-cover">商品图</div>
-                          )
-                        }
-                        actions={[
-                          <Button type="link" onClick={() => openProduct(product.id)}>查看详情</Button>,
-                        ]}
-                      >
-                        <Space direction="vertical" size={8}>
-                          <Space wrap>
-                            <Tag color="blue">商品 #{product.id}</Tag>
-                            <Tag>销量 {product.sales_count}</Tag>
-                          </Space>
-                          <Text strong>{product.name}</Text>
-                          <Space size={8} align="baseline">
-                            <Text className="price">￥{yuan(product.price_cent)}</Text>
-                            {product.market_price_cent ? (
-                              <Text delete type="secondary">￥{yuan(product.market_price_cent)}</Text>
-                            ) : null}
-                          </Space>
-                        </Space>
-                      </Card>
-                    </Col>
-                  ))}
-                </Row>
+                <div className="shop-logo-placeholder">
+                  <ShopOutlined />
+                </div>
               )}
-            </Skeleton>
-          </Card>
-        </Col>
-      </Row>
+              <div className="shop-hero-info">
+                <h1 className="shop-name">{merchant?.name ?? `店铺 #${numericMerchantId}`}</h1>
+                <div className="shop-hero-meta">
+                  <Tag className="shop-tag-id">店铺 #{numericMerchantId}</Tag>
+                  <Tag className="shop-tag-stat">在售 {total}</Tag>
+                  <Tag className="shop-tag-follow">
+                    <HeartOutlined /> {followStatus?.follower_count ?? 0}
+                  </Tag>
+                </div>
+                <div className="shop-announcement">
+                  <EnvironmentOutlined />
+                  <span>{merchant?.announcement || '店铺暂未填写公告'}</span>
+                </div>
+              </div>
+            </div>
+            <div className="shop-hero-actions">
+              <Button
+                type={followStatus?.followed ? 'default' : 'primary'}
+                icon={followStatus?.followed ? <HeartFilled /> : <HeartOutlined />}
+                onClick={() => void toggleFollow()}
+                className={followStatus?.followed ? 'shop-btn-followed' : 'btn-shop-primary'}
+              >
+                {followStatus?.followed ? '已关注' : '关注店铺'}
+              </Button>
+              <Link to="/">
+                <Button className="shop-btn-back">返回首页</Button>
+              </Link>
+            </div>
+          </Skeleton>
+        </div>
+      </div>
 
+      {/* ── Coupon Strip ── */}
+      {coupons.length > 0 && (
+        <div className="shop-coupon-strip">
+          <div className="shop-coupon-header">
+            <GiftOutlined />
+            <span>店铺优惠券</span>
+            <Button size="small" type="link" icon={<ReloadOutlined />} onClick={() => void loadCoupons()}>
+              刷新
+            </Button>
+          </div>
+          <div className="shop-coupon-list">
+            {coupons.map((coupon) => {
+              const soldOut = coupon.total_quantity !== 0 && coupon.claimed_quantity >= coupon.total_quantity
+              return (
+                <div key={coupon.id} className={`shop-coupon-card ${soldOut ? 'shop-coupon-soldout' : ''}`}>
+                  <div className="shop-coupon-left">
+                    <span className="shop-coupon-discount">¥{yuan(coupon.discount_value)}</span>
+                    <span className="shop-coupon-min">满¥{yuan(coupon.min_amount_cent)}可用</span>
+                  </div>
+                  <div className="shop-coupon-right">
+                    <span className="shop-coupon-name">{coupon.name}</span>
+                    <Tag className="shop-coupon-scope">
+                      {coupon.scope_type === 'merchant' ? '本店可用' : '平台通用'}
+                    </Tag>
+                    <span className="shop-coupon-remain">
+                      {coupon.total_quantity === 0 ? '不限量' : `剩余 ${coupon.total_quantity - coupon.claimed_quantity}`}
+                    </span>
+                  </div>
+                  <Button
+                    size="small"
+                    type="primary"
+                    disabled={soldOut}
+                    onClick={() => void claimCoupon(coupon.id)}
+                    className="btn-shop-primary"
+                  >
+                    {soldOut ? '已领完' : '领取'}
+                  </Button>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ── Filter Bar ── */}
+      <div className="shop-filter-bar">
+        <div className="shop-filter-left">
+          <span className="shop-filter-label">价格</span>
+          <InputNumber
+            size="small"
+            min={0}
+            precision={2}
+            placeholder="最低"
+            value={minPriceYuan}
+            onChange={setMinPriceYuan}
+            className="shop-price-input"
+          />
+          <span className="shop-price-sep">—</span>
+          <InputNumber
+            size="small"
+            min={0}
+            precision={2}
+            placeholder="最高"
+            value={maxPriceYuan}
+            onChange={setMaxPriceYuan}
+            className="shop-price-input"
+          />
+          <span className="shop-filter-label">排序</span>
+          <Select
+            size="small"
+            value={sort}
+            onChange={setSort}
+            options={[
+              { value: 'newest:desc', label: '最新上架' },
+              { value: 'price:asc', label: '价格升序' },
+              { value: 'price:desc', label: '价格降序' },
+              { value: 'sales:desc', label: '销量优先' },
+            ]}
+            className="shop-sort-select"
+          />
+        </div>
+        <div className="shop-filter-right">
+          <span className="shop-filter-total">共 {total} 件商品</span>
+          <Button size="small" icon={<ReloadOutlined />} onClick={() => void loadMerchant()}>
+            刷新
+          </Button>
+        </div>
+      </div>
+
+      {/* ── Product Grid ── */}
+      <div className="shop-product-section">
+        <Skeleton loading={loading} active>
+          {products.length === 0 ? (
+            <Empty description="当前店铺暂无符合条件的在售商品" style={{ padding: '60px 0' }} />
+          ) : (
+            <div className="shop-product-grid">
+              {products.map((product) => (
+                <div key={product.id} className="shop-product-card" onClick={() => void openProduct(product.id)}>
+                  <div className="shop-product-img">
+                    {product.cover_url ? (
+                      <img src={absoluteAssetUrl(product.cover_url)} alt={product.name} loading="lazy" />
+                    ) : (
+                      <div className="shop-product-noimg">暂无图片</div>
+                    )}
+                  </div>
+                  <div className="shop-product-body">
+                    <Text className="shop-product-name" ellipsis>{product.name}</Text>
+                    <div className="shop-product-meta">
+                      <Tag className="shop-product-tag-id">#{product.id}</Tag>
+                      <span className="shop-product-sales">销量 {product.sales_count}</span>
+                    </div>
+                    <div className="shop-product-price-row">
+                      <span className="shop-product-price">¥{yuan(product.price_cent)}</span>
+                      {product.market_price_cent ? (
+                        <span className="shop-product-market">¥{yuan(product.market_price_cent)}</span>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Skeleton>
+      </div>
+
+      {/* ── Product Detail Drawer ── */}
       <Drawer
         title="商品详情"
         width={980}
         open={!!selectedProduct}
         onClose={() => setSelectedProduct(null)}
         destroyOnClose
+        className="shop-drawer"
       >
         {selectedProduct ? (
-          <Row gutter={[28, 28]} className="product-detail-layout">
-            <Col span={11}>
-              {selectedProductImages[0] ? (
-                <Image className="detail-image" src={absoluteAssetUrl(selectedProductImages[0])} />
-              ) : (
-                <div className="product-cover detail-image">商品图</div>
-              )}
-              {selectedProductImages.length > 1 ? (
-                <Space wrap className="detail-gallery">
-                  {selectedProductImages.slice(1).map((url, index) => (
-                    <Image key={`${url}-${index}`} width={86} height={86} src={absoluteAssetUrl(url)} />
-                  ))}
-                </Space>
-              ) : null}
-            </Col>
-            <Col span={13}>
-              <Space direction="vertical" size={18} style={{ width: '100%' }}>
-                <Space wrap>
-                  <Tag color="blue">商品 #{selectedProduct.id}</Tag>
-                  <Tag color="purple">店铺 #{selectedProduct.merchant.id}</Tag>
-                  <Tag>分类 #{selectedProduct.category_id ?? '-'}</Tag>
-                  <Tag color="gold">
-                    {selectedProduct.review_summary.average_score ?? '-'} 分 / {selectedProduct.review_summary.count} 评
-                  </Tag>
-                </Space>
-                <Title level={2}>{selectedProduct.name}</Title>
-                <Space size={12} align="baseline">
-                  <Text className="detail-price">￥{yuan(selectedSku?.price_cent)}</Text>
-                  {selectedSku?.market_price_cent ? (
-                    <Text delete type="secondary">￥{yuan(selectedSku.market_price_cent)}</Text>
-                  ) : null}
-                </Space>
-                <div className="sku-grid">
-                  {selectedProduct.skus.map((sku) => (
-                    <Button
-                      key={sku.id}
-                      type={selectedSkuId === sku.id ? 'primary' : 'default'}
-                      onClick={() => setSelectedSkuId(sku.id)}
-                    >
-                      {sku.name} / SKU #{sku.id} / 库存 {sku.stock}
-                    </Button>
-                  ))}
+          <div className="shop-detail">
+            {/* Tags row */}
+            <div className="shop-detail-tags">
+              <Tag className="shop-tag-id">商品 #{selectedProduct.id}</Tag>
+              <Tag className="shop-tag-stat">店铺 #{selectedProduct.merchant.id}</Tag>
+              {selectedProduct.category_id && <Tag className="shop-tag-stat">分类 #{selectedProduct.category_id}</Tag>}
+              <Tag className="shop-tag-review">
+                {selectedProduct.review_summary.average_score ?? '-'} 分 / {selectedProduct.review_summary.count} 评
+              </Tag>
+            </div>
+
+            <div className="shop-detail-layout">
+              {/* Left: Images */}
+              <div className="shop-detail-left">
+                {selectedProductImages[0] ? (
+                  <Image className="shop-detail-main-img" src={absoluteAssetUrl(selectedProductImages[0])} />
+                ) : (
+                  <div className="shop-product-noimg shop-detail-main-img">暂无图片</div>
+                )}
+                {selectedProductImages.length > 1 && (
+                  <div className="shop-detail-gallery">
+                    {selectedProductImages.slice(1).map((url, index) => (
+                      <Image
+                        key={`${url}-${index}`}
+                        width={80}
+                        height={80}
+                        src={absoluteAssetUrl(url)}
+                        className="shop-detail-thumb"
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Right: Info */}
+              <div className="shop-detail-right">
+                <h2 className="shop-detail-name">{selectedProduct.name}</h2>
+                <div className="shop-detail-price-box">
+                  <span className="shop-detail-price">¥{yuan(selectedSku?.price_cent)}</span>
+                  {selectedSku?.market_price_cent && (
+                    <span className="shop-detail-market">¥{yuan(selectedSku.market_price_cent)}</span>
+                  )}
                 </div>
-                <Space>
-                  <InputNumber min={1} value={quantity} onChange={(value) => setQuantity(Number(value) || 1)} />
-                  <Button type="primary" size="large" onClick={addCart}>加入购物车</Button>
-                  <Link to="/cart">
-                    <Button size="large">去购物车</Button>
-                  </Link>
-                </Space>
-                <Card size="small" title="图文详情">
+
+                {/* SKU Selection */}
+                <div className="shop-detail-sku-section">
+                  <Text type="secondary" className="shop-detail-section-label">规格选择</Text>
+                  <div className="shop-detail-sku-grid">
+                    {selectedProduct.skus.map((sku) => (
+                      <button
+                        key={sku.id}
+                        className={`shop-sku-btn ${selectedSkuId === sku.id ? 'shop-sku-btn-active' : ''}`}
+                        onClick={() => setSelectedSkuId(sku.id)}
+                      >
+                        <span className="shop-sku-name">{sku.name}</span>
+                        <span className="shop-sku-info">SKU #{sku.id} · 库存 {sku.stock}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Quantity + Actions */}
+                <div className="shop-detail-actions">
+                  <div className="shop-detail-qty">
+                    <Text type="secondary" className="shop-detail-section-label">数量</Text>
+                    <InputNumber min={1} value={quantity} onChange={(value) => setQuantity(Number(value) || 1)} />
+                  </div>
+                  <div className="shop-detail-btns">
+                    <Button
+                      type="primary"
+                      size="large"
+                      icon={<ShoppingCartOutlined />}
+                      onClick={() => void addCart()}
+                      className="btn-shop-primary"
+                    >
+                      加入购物车
+                    </Button>
+                    <Link to="/cart">
+                      <Button size="large">去购物车</Button>
+                    </Link>
+                  </div>
+                </div>
+
+                {/* Description */}
+                <Card size="small" title="图文详情" className="shop-detail-desc-card">
                   <Paragraph style={{ whiteSpace: 'pre-line' }}>{selectedProduct.description || '暂无描述'}</Paragraph>
-                  {selectedProductImages.length ? (
-                    <Space direction="vertical" size={12} className="detail-content-images">
+                  {selectedProductImages.length > 0 && (
+                    <Space direction="vertical" size={12} style={{ width: '100%' }}>
                       {selectedProductImages.map((url, index) => (
-                        <Image key={`${url}-content-${index}`} src={absoluteAssetUrl(url)} />
+                        <Image key={`${url}-content-${index}`} src={absoluteAssetUrl(url)} width="100%" />
                       ))}
                     </Space>
-                  ) : null}
+                  )}
                 </Card>
-              </Space>
-            </Col>
-          </Row>
+              </div>
+            </div>
+          </div>
         ) : null}
       </Drawer>
-    </main>
+    </div>
   )
 }

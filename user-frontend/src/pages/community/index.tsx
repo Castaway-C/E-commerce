@@ -3,7 +3,6 @@ import {
   Avatar,
   Button,
   Card,
-  Col,
   Divider,
   Drawer,
   Empty,
@@ -12,8 +11,6 @@ import {
   List,
   Modal,
   QRCode,
-  Row,
-  Segmented,
   Select,
   Space,
   Statistic,
@@ -23,6 +20,13 @@ import {
   message,
 } from 'antd'
 import type { UploadFile } from 'antd'
+import {
+  HeartOutlined,
+  HeartFilled,
+  MessageOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+} from '@ant-design/icons'
 
 import {
   communityService,
@@ -105,8 +109,11 @@ export function CommunityPage() {
   const [commentContent, setCommentContent] = useState('这是一条评论。')
   const [alipayQrCode, setAlipayQrCode] = useState('')
   const [noticeText, setNoticeText] = useState('')
+  const [showPostForm, setShowPostForm] = useState(false)
+  const [showSourceOrder, setShowSourceOrder] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [likedPosts, setLikedPosts] = useState<Set<number>>(new Set())
 
-  // 种草来源下单
   const [sourcePostId, setSourcePostId] = useState('')
   const [sourceSkuId, setSourceSkuId] = useState('')
 
@@ -149,10 +156,15 @@ export function CommunityPage() {
   }
 
   async function loadPosts() {
-    const data = await run<{ list?: CommunityPost[] }>('社区帖子', () =>
-      communityService.listPosts({ section: communitySection, topic: communityTopic }),
-    )
-    setPosts(data?.list ?? [])
+    setLoading(true)
+    try {
+      const data = await run<{ list?: CommunityPost[] }>('社区帖子', () =>
+        communityService.listPosts({ section: communitySection, topic: communityTopic }),
+      )
+      setPosts(data?.list ?? [])
+    } finally {
+      setLoading(false)
+    }
   }
 
   async function loadCommunityTopics() {
@@ -219,6 +231,7 @@ export function CommunityPage() {
       message.success(type === 'grass' ? '种草帖已发布' : '普通帖已发布')
       await loadPosts()
       await loadCommunityTopics()
+      setShowPostForm(false)
     } catch (error) {
       const bizMessage = pickErrorMessage(error)
       message.error(
@@ -238,9 +251,18 @@ export function CommunityPage() {
   async function likePost(postId: number) {
     const data = await run<{ liked: boolean; like_count: number }>('点赞', () => communityService.likePost(postId))
     if (data) {
-      message.success(`点赞状态：${data.liked ? '已点赞' : '已取消'}，点赞数：${data.like_count}`)
-      await loadPosts()
-      if (selectedPost) {
+      setLikedPosts((current) => {
+        const next = new Set(current)
+        if (data.liked) next.add(postId)
+        else next.delete(postId)
+        return next
+      })
+      setPosts((current) =>
+        current.map((post) =>
+          post.id === postId ? { ...post, like_count: data.like_count } : post,
+        ),
+      )
+      if (selectedPost && selectedPost.id === postId) {
         setSelectedPost({ ...selectedPost, like_count: data.like_count })
       }
     }
@@ -372,211 +394,184 @@ export function CommunityPage() {
   }, [])
 
   return (
-    <main className="shop-page community-page">
-      <Card
-        title="社区广场"
-        className="section-card community-section"
-        extra={<Button onClick={loadPosts}>刷新帖子</Button>}
-      >
-        <Segmented
-          className="community-tabs"
-          value={communitySection ?? 'square'}
-          onChange={(value) => setCommunitySection(value === 'square' ? undefined : String(value))}
-          options={SECTION_OPTIONS}
-        />
-        <Paragraph type="secondary" className="community-hint">
-          综合广场展示所有公开帖子；种草专区用于从帖子进入商品并保留种草来源，普通帖和商家动态可关联商品但不产生种草奖励。
-        </Paragraph>
-        <Space wrap className="community-topic-bar">
-          <Text type="secondary">热门话题：</Text>
-          {communityTopics.length ? (
-            communityTopics.map((topic) => (
-              <Tag
-                key={topic.name}
-                color={communityTopic === topic.name ? 'purple' : 'default'}
-                className="clickable-tag"
-                onClick={() => filterByTopic(topic.name)}
-              >
-                #{topic.name} {topic.post_count}
-              </Tag>
-            ))
-          ) : (
-            <Text type="secondary">暂无话题</Text>
-          )}
-          {communityTopic ? (
-            <Button size="small" onClick={clearCommunityTopic}>清除话题：#{communityTopic}</Button>
-          ) : null}
-        </Space>
-        <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
-          {posts.map((post) => (
-            <Col xs={24} sm={12} md={8} lg={6} key={post.id}>
-              <Card
-                hoverable
-                className="post-card"
-                cover={
-                  post.image_urls[0] ? (
-                    <Image preview={false} src={absoluteAssetUrl(post.image_urls[0])} />
-                  ) : (
-                    <div className="post-cover">{statusText(post.type)}</div>
-                  )
-                }
-                onClick={() => openPost(post)}
-              >
-                <Space direction="vertical" size={8} style={{ width: '100%' }}>
-                  <Space wrap>
-                    <Tag color={post.type === 'grass' ? 'purple' : 'blue'}>{statusText(post.type)}</Tag>
-                    <Tag>{statusText(post.section)}</Tag>
-                    <Tag color={statusColor(post.status)}>{statusText(post.status)}</Tag>
-                  </Space>
-                  <Text strong>{post.title}</Text>
-                  <Space size={6} onClick={(event) => event.stopPropagation()}>
-                    <Avatar size="small" src={absoluteAssetUrl(post.author.avatar_url)}>
-                      {post.author.nickname?.[0] ?? '用'}
-                    </Avatar>
-                    <Button type="link" size="small" onClick={() => openCommunityUser(post.author.id)}>
-                      {post.author.nickname}
-                    </Button>
-                  </Space>
-                  <Paragraph ellipsis={{ rows: 2 }}>{post.content}</Paragraph>
-                  {post.topic_tags.length ? (
-                    <Space wrap size={4}>
-                      {post.topic_tags.map((tag) => (
-                        <Tag
-                          key={tag}
-                          className="clickable-tag"
-                          color={communityTopic === tag ? 'purple' : 'default'}
-                          onClick={(event) => {
-                            event.stopPropagation()
-                            filterByTopic(tag)
-                          }}
-                        >
-                          #{tag}
-                        </Tag>
-                      ))}
-                    </Space>
-                  ) : null}
-                  {renderCommunityProductCards(post.product_ids, true)}
-                  <Space split={<Divider type="vertical" />}>
-                    <Text>赞 {post.like_count}</Text>
-                    <Text>评 {post.comment_count}</Text>
-                    <Text>{new Date(post.created_at).toLocaleDateString()}</Text>
-                  </Space>
-                </Space>
-              </Card>
-            </Col>
-          ))}
-        </Row>
-        {posts.length === 0 ? <Empty description="暂无社区内容" /> : null}
-      </Card>
-
-      <Card title="发布社区内容" className="section-card" style={{ marginTop: 16 }}>
-        <Row gutter={[12, 12]}>
-          <Col xs={24} md={8}>
-            <Input value={postTitle} onChange={(event) => setPostTitle(event.target.value)} placeholder="标题" />
-          </Col>
-          <Col xs={24} md={8}>
-            <Select
-              mode="multiple"
-              allowClear
-              showSearch
-              optionFilterProp="label"
-              filterOption={false}
-              style={{ width: '100%' }}
-              value={selectedPostProductIds}
-              onChange={setSelectedPostProductIds}
-              onSearch={(value) => searchPostProducts(value)}
-              onFocus={() => searchPostProducts()}
-              options={postProductOptions}
-              placeholder="搜索并选择关联商品；种草帖需选择已完成订单商品"
-            />
-          </Col>
-          <Col xs={24} md={8}>
-            <Select
-              style={{ width: '100%', marginBottom: 8 }}
-              value={postSection}
-              onChange={setPostSection}
-              options={POST_SECTION_OPTIONS}
-            />
-            <Upload
-              fileList={uploadFiles}
-              beforeUpload={(file) => uploadPostImage(file)}
-              onRemove={(file) => {
-                setPostImages((items) => items.filter((item) => absoluteAssetUrl(item) !== file.url))
-                return true
-              }}
-            >
-              <Button>上传帖子图片</Button>
-            </Upload>
-          </Col>
-          <Col span={24}>
-            <Input
-              value={postTopicTags}
-              onChange={(event) => setPostTopicTags(event.target.value)}
-              placeholder="话题标签，例如：开箱 零食测评；支持中文逗号、英文逗号或空格"
-            />
-          </Col>
-          <Col span={24}>
-            <Input.TextArea rows={3} value={postContent} onChange={(event) => setPostContent(event.target.value)} />
-          </Col>
-          <Col span={24}>
-            <Space>
-              <Button onClick={() => createPost('normal')}>发布普通帖</Button>
-              <Button type="primary" onClick={() => createPost('grass')}>发布种草帖</Button>
-              <Button onClick={loadPosts}>刷新帖子</Button>
-            </Space>
-          </Col>
-        </Row>
-      </Card>
-
-      <Card title="种草来源下单" className="section-card" style={{ marginTop: 16 }}>
-        <Space wrap>
-          <Input
-            style={{ width: 180 }}
-            value={sourcePostId}
-            onChange={(event) => setSourcePostId(event.target.value)}
-            placeholder="种草帖 ID"
-          />
-          <Input
-            style={{ width: 180 }}
-            value={sourceSkuId}
-            onChange={(event) => setSourceSkuId(event.target.value)}
-            placeholder="SKU ID"
-          />
-          <Button type="primary" onClick={handleSourceOrder}>加购并来源下单</Button>
-        </Space>
-        <Paragraph type="secondary" style={{ marginTop: 12 }}>
-          下单并完成支付宝沙箱支付后，到订单页同步支付结果并确认收货，种草帖作者会增加基础积分。
-        </Paragraph>
-        {alipayQrCode ? (
-          <div style={{ marginTop: 12 }}>
-            <QRCode value={alipayQrCode} size={180} />
-            <Paragraph type="secondary" style={{ marginTop: 8 }}>
-              请使用支付宝沙箱买家账号扫码付款。二维码内容不是网页支付链接，直接打开不会进入该订单支付。
-            </Paragraph>
+    <div className="comm-page">
+      {/* ── Top Bar: Section Tabs + Actions ── */}
+      <div className="comm-topbar">
+        <div className="comm-topbar-inner">
+          <div className="comm-tabs">
+            {SECTION_OPTIONS.map((tab) => {
+              const isActive = (communitySection ?? 'square') === tab.value
+              return (
+                <button
+                  key={tab.value}
+                  className={`comm-tab ${isActive ? 'comm-tab-active' : ''}`}
+                  onClick={() => setCommunitySection(tab.value === 'square' ? undefined : tab.value)}
+                >
+                  {tab.label}
+                </button>
+              )
+            })}
           </div>
-        ) : null}
-        {noticeText ? <Paragraph style={{ marginTop: 8 }}>{noticeText}</Paragraph> : null}
-      </Card>
+          <div className="comm-topbar-actions">
+            <Button
+              icon={<PlusOutlined />}
+              type="primary"
+              className="btn-comm-primary"
+              onClick={() => setShowPostForm(true)}
+            >
+              发布
+            </Button>
+            <Button icon={<ReloadOutlined />} onClick={() => void loadPosts()}>刷新</Button>
+            <Button onClick={() => setShowSourceOrder(true)}>种草下单</Button>
+          </div>
+        </div>
+      </div>
 
+      {/* ── Topic Chips ── */}
+      {communityTopics.length > 0 && (
+        <div className="comm-topic-bar">
+          <div className="comm-topic-bar-inner">
+            <Text type="secondary" className="comm-topic-label">热门话题</Text>
+            <div className="comm-topic-chips">
+              {communityTopics.map((topic) => (
+                <button
+                  key={topic.name}
+                  className={`comm-topic-chip ${communityTopic === topic.name ? 'comm-topic-chip-active' : ''}`}
+                  onClick={() => filterByTopic(topic.name)}
+                >
+                  #{topic.name}
+                  <span className="comm-topic-count">{topic.post_count}</span>
+                </button>
+              ))}
+            </div>
+            {communityTopic && (
+              <Button size="small" type="link" onClick={clearCommunityTopic}>清除 #{communityTopic}</Button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Masonry Post Grid ── */}
+      <div className="comm-grid-section">
+        {posts.length === 0 && !loading ? (
+          <Empty
+            description="暂无社区内容，快来发布第一条吧"
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            style={{ padding: '80px 0' }}
+          />
+        ) : (
+          <div className="comm-masonry">
+            {posts.map((post) => {
+              const isLiked = likedPosts.has(post.id)
+              return (
+                <div key={post.id} className="comm-card" onClick={() => void openPost(post)}>
+                  {/* Image */}
+                  {post.image_urls[0] ? (
+                    <div className="comm-card-image">
+                      <img src={absoluteAssetUrl(post.image_urls[0])} alt={post.title} loading="lazy" />
+                    </div>
+                  ) : (
+                    <div className="comm-card-noimg">
+                      <span>{statusText(post.type)}</span>
+                    </div>
+                  )}
+
+                  {/* Content */}
+                  <div className="comm-card-body">
+                    <div className="comm-card-tags">
+                      {post.type === 'grass' && <Tag className="comm-tag-grass">种草</Tag>}
+                      {post.type === 'merchant' && <Tag className="comm-tag-merchant">商家</Tag>}
+                      {post.product_ids.length > 0 && (
+                        <Tag className="comm-tag-product">关联 {post.product_ids.length} 件商品</Tag>
+                      )}
+                    </div>
+                    <Text className="comm-card-title">{post.title}</Text>
+                    <Paragraph className="comm-card-content" ellipsis={{ rows: 2 }}>
+                      {post.content}
+                    </Paragraph>
+                    {post.topic_tags.length > 0 && (
+                      <div className="comm-card-topics">
+                        {post.topic_tags.slice(0, 3).map((tag) => (
+                          <span
+                            key={tag}
+                            className="comm-card-topic"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              filterByTopic(tag)
+                            }}
+                          >
+                            #{tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Footer: Author + Like */}
+                    <div className="comm-card-footer">
+                      <div
+                        className="comm-card-author"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          void openCommunityUser(post.author.id)
+                        }}
+                      >
+                        <Avatar size={24} src={absoluteAssetUrl(post.author.avatar_url)}>
+                          {post.author.nickname?.[0] ?? '用'}
+                        </Avatar>
+                        <span className="comm-card-author-name">{post.author.nickname}</span>
+                      </div>
+                      <button
+                        className={`comm-like-btn ${isLiked ? 'comm-like-btn-active' : ''}`}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          void likePost(post.id)
+                        }}
+                      >
+                        {isLiked ? <HeartFilled /> : <HeartOutlined />}
+                        <span>{post.like_count}</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* ── Post Detail Drawer ── */}
       <Drawer
         open={!!selectedPost}
-        width={640}
+        width={560}
         title={selectedPost?.title}
         onClose={() => setSelectedPost(null)}
+        className="comm-drawer"
       >
         {selectedPost ? (
-          <Space direction="vertical" size={16} style={{ width: '100%' }}>
-            <Space wrap>
-              <Tag color={selectedPost.type === 'grass' ? 'purple' : 'blue'}>{statusText(selectedPost.type)}</Tag>
-              <Tag>{statusText(selectedPost.section)}</Tag>
-              <Tag color={statusColor(selectedPost.status)}>{statusText(selectedPost.status)}</Tag>
-              <Button type="link" onClick={() => openCommunityUser(selectedPost.author.id)}>
-                作者：{selectedPost.author?.nickname || '匿名'}
-              </Button>
-            </Space>
-            <Paragraph>{selectedPost.content}</Paragraph>
-            {selectedPost.topic_tags.length ? (
-              <Space wrap>
+          <div className="comm-detail">
+            {/* Author Header */}
+            <div className="comm-detail-header">
+              <Avatar size={40} src={absoluteAssetUrl(selectedPost.author.avatar_url)}>
+                {selectedPost.author.nickname?.[0] ?? '用'}
+              </Avatar>
+              <div className="comm-detail-author-info">
+                <Text strong>{selectedPost.author.nickname}</Text>
+                <Text type="secondary" className="comm-detail-date">
+                  {new Date(selectedPost.created_at).toLocaleString()}
+                </Text>
+              </div>
+              <div className="comm-detail-tags">
+                <Tag color={statusColor(selectedPost.status)}>{statusText(selectedPost.status)}</Tag>
+                <Tag>{statusText(selectedPost.section)}</Tag>
+              </div>
+            </div>
+
+            {/* Content */}
+            <Paragraph className="comm-detail-content">{selectedPost.content}</Paragraph>
+
+            {/* Topics */}
+            {selectedPost.topic_tags.length > 0 && (
+              <div className="comm-detail-topics">
                 {selectedPost.topic_tags.map((tag) => (
                   <Tag
                     key={tag}
@@ -587,49 +582,205 @@ export function CommunityPage() {
                     #{tag}
                   </Tag>
                 ))}
-              </Space>
-            ) : null}
-            {selectedPost.image_urls.length ? (
+              </div>
+            )}
+
+            {/* Images */}
+            {selectedPost.image_urls.length > 0 && (
               <Image.PreviewGroup>
-                <Space wrap>
+                <div className="comm-detail-images">
                   {selectedPost.image_urls.map((url) => (
-                    <Image width={120} key={url} src={absoluteAssetUrl(url)} />
+                    <Image
+                      key={url}
+                      width="100%"
+                      src={absoluteAssetUrl(url)}
+                      className="comm-detail-image"
+                    />
                   ))}
-                </Space>
+                </div>
               </Image.PreviewGroup>
-            ) : null}
-            <Card size="small" title="关联商品">
-              {renderCommunityProductCards(selectedPost.product_ids)}
-            </Card>
-            <Space>
-              <Button onClick={() => likePost(selectedPost.id)}>点赞 ({selectedPost.like_count})</Button>
-            </Space>
+            )}
+
+            {/* Linked Products */}
+            {selectedPost.product_ids.length > 0 && (
+              <div className="comm-detail-products">
+                <Text strong className="comm-detail-section-title">关联商品</Text>
+                {renderCommunityProductCards(selectedPost.product_ids)}
+              </div>
+            )}
+
+            {/* Like + Comment counts */}
+            <div className="comm-detail-actions">
+              <Button
+                icon={likedPosts.has(selectedPost.id) ? <HeartFilled style={{ color: '#f5222d' }} /> : <HeartOutlined />}
+                onClick={() => void likePost(selectedPost.id)}
+                className="comm-detail-like-btn"
+              >
+                {selectedPost.like_count}
+              </Button>
+              <Text type="secondary"><MessageOutlined /> {selectedPost.comment_count} 条评论</Text>
+            </div>
+
             <Divider />
-            <List
-              header="评论"
-              dataSource={comments}
-              locale={{ emptyText: '暂无评论' }}
-              renderItem={(comment) => (
-                <List.Item>
-                  <List.Item.Meta
-                    title={comment.author?.nickname || '匿名'}
-                    description={comment.content}
-                  />
-                </List.Item>
-              )}
-            />
-            <Space.Compact style={{ width: '100%' }}>
+
+            {/* Comments */}
+            <div className="comm-detail-comments">
+              <Text strong className="comm-detail-section-title">评论</Text>
+              <List
+                dataSource={comments}
+                locale={{ emptyText: '暂无评论，快来抢沙发' }}
+                renderItem={(comment) => (
+                  <List.Item className="comm-comment-item">
+                    <div className="comm-comment">
+                      <Avatar size={28} src={absoluteAssetUrl(comment.author.avatar_url)}>
+                        {comment.author.nickname?.[0] ?? '用'}
+                      </Avatar>
+                      <div className="comm-comment-body">
+                        <Text strong className="comm-comment-author">
+                          {comment.author.nickname || '匿名'}
+                        </Text>
+                        <Text className="comm-comment-text">{comment.content}</Text>
+                        <Text type="secondary" className="comm-comment-date">
+                          {new Date(comment.created_at).toLocaleString()}
+                        </Text>
+                      </div>
+                    </div>
+                  </List.Item>
+                )}
+              />
+            </div>
+
+            {/* Comment Input */}
+            <div className="comm-comment-input">
               <Input
                 value={commentContent}
                 onChange={(event) => setCommentContent(event.target.value)}
-                placeholder="写评论"
+                placeholder="写下你的评论…"
+                onPressEnter={() => void commentPost(selectedPost.id)}
               />
-              <Button type="primary" onClick={() => commentPost(selectedPost.id)}>发送</Button>
-            </Space.Compact>
-          </Space>
+              <Button type="primary" onClick={() => void commentPost(selectedPost.id)} className="btn-comm-primary">
+                发送
+              </Button>
+            </div>
+          </div>
         ) : null}
       </Drawer>
 
+      {/* ── Create Post Modal ── */}
+      <Modal
+        open={showPostForm}
+        title="发布社区内容"
+        onCancel={() => setShowPostForm(false)}
+        footer={null}
+        width={640}
+      >
+        <div className="comm-post-form">
+          <Input
+            value={postTitle}
+            onChange={(event) => setPostTitle(event.target.value)}
+            placeholder="标题"
+            className="comm-form-input"
+          />
+          <Select
+            style={{ width: '100%' }}
+            value={postSection}
+            onChange={setPostSection}
+            options={POST_SECTION_OPTIONS}
+            className="comm-form-input"
+          />
+          <Select
+            mode="multiple"
+            allowClear
+            showSearch
+            optionFilterProp="label"
+            filterOption={false}
+            style={{ width: '100%' }}
+            value={selectedPostProductIds}
+            onChange={setSelectedPostProductIds}
+            onSearch={(value) => searchPostProducts(value)}
+            onFocus={() => searchPostProducts()}
+            options={postProductOptions}
+            placeholder="搜索并选择关联商品；种草帖需选择已完成订单商品"
+            className="comm-form-input"
+          />
+          <Input
+            value={postTopicTags}
+            onChange={(event) => setPostTopicTags(event.target.value)}
+            placeholder="话题标签，例如：开箱 零食测评；支持中文逗号、英文逗号或空格"
+            className="comm-form-input"
+          />
+          <Input.TextArea
+            rows={4}
+            value={postContent}
+            onChange={(event) => setPostContent(event.target.value)}
+            placeholder="分享你的体验…"
+            className="comm-form-input"
+          />
+          <Upload
+            fileList={uploadFiles}
+            listType="picture-card"
+            beforeUpload={(file) => uploadPostImage(file)}
+            onRemove={(file) => {
+              setPostImages((items) => items.filter((item) => absoluteAssetUrl(item) !== file.url))
+              return true
+            }}
+          >
+            {postImages.length >= 9 ? null : (
+              <div>
+                <PlusOutlined />
+                <div style={{ marginTop: 8 }}>上传图片</div>
+              </div>
+            )}
+          </Upload>
+          <Space>
+            <Button onClick={() => createPost('normal')}>发布普通帖</Button>
+            <Button type="primary" onClick={() => createPost('grass')} className="btn-comm-primary">
+              发布种草帖
+            </Button>
+          </Space>
+        </div>
+      </Modal>
+
+      {/* ── Source Order Modal ── */}
+      <Modal
+        open={showSourceOrder}
+        title="种草来源下单"
+        onCancel={() => setShowSourceOrder(false)}
+        footer={null}
+        width={480}
+      >
+        <div className="comm-source-order">
+          <Input
+            value={sourcePostId}
+            onChange={(event) => setSourcePostId(event.target.value)}
+            placeholder="种草帖 ID"
+            className="comm-form-input"
+          />
+          <Input
+            value={sourceSkuId}
+            onChange={(event) => setSourceSkuId(event.target.value)}
+            placeholder="SKU ID"
+            className="comm-form-input"
+          />
+          <Button type="primary" block onClick={handleSourceOrder} className="btn-comm-primary">
+            加购并来源下单
+          </Button>
+          <Paragraph type="secondary" style={{ marginTop: 12, fontSize: 13 }}>
+            下单并完成支付宝沙箱支付后，到订单页同步支付结果并确认收货，种草帖作者会增加基础积分。
+          </Paragraph>
+          {alipayQrCode ? (
+            <div className="comm-source-qr">
+              <QRCode value={alipayQrCode} size={180} />
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                请使用支付宝沙箱买家账号扫码付款
+              </Text>
+            </div>
+          ) : null}
+          {noticeText ? <Paragraph style={{ marginTop: 8 }}>{noticeText}</Paragraph> : null}
+        </div>
+      </Modal>
+
+      {/* ── Community User Profile Modal ── */}
       <Modal
         open={!!selectedCommunityUser}
         title={selectedCommunityUser ? `${selectedCommunityUser.user.nickname} 的社区主页` : '社区主页'}
@@ -638,53 +789,55 @@ export function CommunityPage() {
         width={760}
       >
         {selectedCommunityUser ? (
-          <Space direction="vertical" size={18} style={{ width: '100%' }}>
-            <Card className="community-profile-card">
-              <Space align="center" size={16}>
-                <Avatar size={72} src={absoluteAssetUrl(selectedCommunityUser.user.avatar_url)}>
-                  {selectedCommunityUser.user.nickname?.[0] ?? '用'}
-                </Avatar>
-                <Space direction="vertical" size={4}>
-                  <Title level={4}>{selectedCommunityUser.user.nickname}</Title>
-                  <Text type="secondary">社区用户 #{selectedCommunityUser.user.id}</Text>
-                </Space>
-              </Space>
-            </Card>
-            <Row gutter={[12, 12]}>
-              <Col span={6}><Card><Statistic title="帖子" value={selectedCommunityUser.post_count} /></Card></Col>
-              <Col span={6}><Card><Statistic title="种草" value={selectedCommunityUser.grass_post_count} /></Card></Col>
-              <Col span={6}><Card><Statistic title="评论" value={selectedCommunityUser.comment_count} /></Card></Col>
-              <Col span={6}><Card><Statistic title="获赞" value={selectedCommunityUser.like_received_count} /></Card></Col>
-            </Row>
-            <Card title="近期帖子">
-              <List
-                grid={{ gutter: 12, column: 2 }}
-                dataSource={selectedCommunityUserPosts}
-                locale={{ emptyText: '暂无公开帖子' }}
-                renderItem={(post) => (
-                  <List.Item>
-                    <Card size="small" hoverable onClick={() => openPost(post)}>
-                      <Space direction="vertical" size={8} style={{ width: '100%' }}>
-                        <Space wrap>
-                          <Tag color={post.type === 'grass' ? 'purple' : 'blue'}>{statusText(post.type)}</Tag>
-                          <Tag>{statusText(post.section)}</Tag>
-                        </Space>
-                        <Text strong>{post.title}</Text>
-                        <Paragraph ellipsis={{ rows: 2 }}>{post.content}</Paragraph>
-                        {post.topic_tags.length ? (
-                          <Space wrap size={4}>
-                            {post.topic_tags.map((tag) => <Tag key={tag}>#{tag}</Tag>)}
-                          </Space>
-                        ) : null}
-                      </Space>
+          <div className="comm-user-profile">
+            <div className="comm-user-header">
+              <Avatar size={64} src={absoluteAssetUrl(selectedCommunityUser.user.avatar_url)}>
+                {selectedCommunityUser.user.nickname?.[0] ?? '用'}
+              </Avatar>
+              <div className="comm-user-info">
+                <Title level={4} style={{ margin: 0 }}>{selectedCommunityUser.user.nickname}</Title>
+                <Text type="secondary">社区用户 #{selectedCommunityUser.user.id}</Text>
+              </div>
+            </div>
+            <div className="comm-user-stats">
+              <div className="comm-user-stat"><Statistic title="帖子" value={selectedCommunityUser.post_count} /></div>
+              <div className="comm-user-stat"><Statistic title="种草" value={selectedCommunityUser.grass_post_count} /></div>
+              <div className="comm-user-stat"><Statistic title="评论" value={selectedCommunityUser.comment_count} /></div>
+              <div className="comm-user-stat"><Statistic title="获赞" value={selectedCommunityUser.like_received_count} /></div>
+            </div>
+            <Text strong className="comm-detail-section-title">近期帖子</Text>
+            <div className="comm-user-posts">
+              {selectedCommunityUserPosts.length === 0 ? (
+                <Empty description="暂无公开帖子" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+              ) : (
+                <div className="comm-user-posts-grid">
+                  {selectedCommunityUserPosts.map((post) => (
+                    <Card
+                      key={post.id}
+                      size="small"
+                      hoverable
+                      className="comm-user-post-card"
+                      onClick={() => {
+                        setSelectedCommunityUser(null)
+                        void openPost(post)
+                      }}
+                    >
+                      {post.image_urls[0] ? (
+                        <img src={absoluteAssetUrl(post.image_urls[0])} alt={post.title} className="comm-user-post-img" />
+                      ) : null}
+                      <Text strong className="comm-user-post-title">{post.title}</Text>
+                      <div className="comm-user-post-meta">
+                        <Text type="secondary">{statusText(post.type)}</Text>
+                        <Text type="secondary">❤ {post.like_count}</Text>
+                      </div>
                     </Card>
-                  </List.Item>
-                )}
-              />
-            </Card>
-          </Space>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         ) : null}
       </Modal>
-    </main>
+    </div>
   )
 }
