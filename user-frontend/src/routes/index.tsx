@@ -12,7 +12,6 @@ import { MerchantPage } from '../pages/merchant'
 import { OrderPage } from '../pages/order'
 import { ProductDetailPage } from '../pages/product/detail'
 import { ProductPage } from '../pages/product'
-import { PromotionPage } from '../pages/promotion'
 import { UserCenterPage } from '../pages/user'
 
 export function AppRoutes() {
@@ -28,7 +27,7 @@ export function AppRoutes() {
       <Route path="/checkout" element={<CheckoutPage />} />
       <Route path="/orders" element={<OrderPage />} />
       <Route path="/community" element={<CommunityPage />} />
-      <Route path="/promotions" element={<PromotionPage />} />
+      <Route path="/promotions" element={<Navigate to="/user" replace />} />
       <Route path="/addresses" element={<AddressPage />} />
       <Route path="/user" element={<UserCenterPage />} />
       <Route path="/merchants/:merchantId" element={<MerchantPage />} />

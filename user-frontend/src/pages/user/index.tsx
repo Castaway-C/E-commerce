@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Avatar,
@@ -26,14 +26,17 @@ import {
   GiftOutlined,
   FireOutlined,
   CrownOutlined,
+  TagOutlined,
+  ReloadOutlined,
 } from '@ant-design/icons'
 import dayjs from 'dayjs'
 
 import { authService, type MemberLevel, type PointsAccount, type PointsLog, type UserProfile } from '../../services/auth'
 import { productService, type MerchantFollowItem, type ProductFavoriteItem } from '../../services/product'
+import { promotionService, type CouponTemplate, type UserCoupon } from '../../services/promotion'
 import { uploadService } from '../../services/upload'
 import { getApiErrorMessage } from '../../services/http'
-import { absoluteAssetUrl, yuan } from '../../utils/format'
+import { absoluteAssetUrl, pickErrorMessage, yuan } from '../../utils/format'
 
 const { Text } = Typography
 
@@ -43,7 +46,25 @@ const GENDER_OPTIONS = [
   { value: 'secret', label: '保密' },
 ]
 
-type SectionTab = 'profile' | 'points' | 'favorites' | 'follows'
+const SCOPE_TEXT: Record<string, string> = {
+  all: '全平台',
+  platform: '全平台',
+  merchant: '指定店铺',
+  category: '指定分类',
+  product: '指定商品',
+  sku: '指定 SKU',
+}
+
+const COUPON_STATUS_TEXT: Record<string, { text: string; cls: string }> = {
+  active: { text: '可领取', cls: 'uc-coupon-status-active' },
+  disabled: { text: '已停用', cls: 'uc-coupon-status-disabled' },
+  unused: { text: '未使用', cls: 'uc-coupon-status-unused' },
+  used: { text: '已使用', cls: 'uc-coupon-status-used' },
+  expired: { text: '已过期', cls: 'uc-coupon-status-expired' },
+  void: { text: '已作废', cls: 'uc-coupon-status-used' },
+}
+
+type SectionTab = 'profile' | 'points' | 'favorites' | 'follows' | 'coupons'
 
 export function UserCenterPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null)
@@ -57,6 +78,8 @@ export function UserCenterPage() {
   const [pointsLogs, setPointsLogs] = useState<PointsLog[]>([])
   const [followedMerchants, setFollowedMerchants] = useState<MerchantFollowItem[]>([])
   const [favoriteProducts, setFavoriteProducts] = useState<ProductFavoriteItem[]>([])
+  const [couponTemplates, setCouponTemplates] = useState<CouponTemplate[]>([])
+  const [myCoupons, setMyCoupons] = useState<UserCoupon[]>([])
   const [loading, setLoading] = useState(false)
   const [activeTab, setActiveTab] = useState<SectionTab>('profile')
 
@@ -92,11 +115,26 @@ export function UserCenterPage() {
     setFavoriteProducts(response.data?.list ?? [])
   }
 
+  async function loadCoupons() {
+    const [templatesRes, myRes] = await Promise.all([
+      promotionService.listCoupons(),
+      promotionService.listMyCoupons(),
+    ])
+    setCouponTemplates(templatesRes.data ?? [])
+    setMyCoupons(myRes.data ?? [])
+  }
+
   async function loadAll() {
     if (!authService.hasToken()) return
     setLoading(true)
     try {
-      await Promise.all([loadProfile(), loadMemberAndPoints(), loadFollowedMerchants(), loadFavoriteProducts()])
+      await Promise.all([
+        loadProfile(),
+        loadMemberAndPoints(),
+        loadFollowedMerchants(),
+        loadFavoriteProducts(),
+        loadCoupons(),
+      ])
     } catch (error) {
       message.error(`加载个人中心失败：${getApiErrorMessage(error)}`)
     } finally {
@@ -168,6 +206,30 @@ export function UserCenterPage() {
     }
   }
 
+  const claimedCountByTemplateId = useMemo(() => {
+    const map = new Map<number, number>()
+    myCoupons.forEach((coupon) => {
+      map.set(coupon.coupon_template_id, (map.get(coupon.coupon_template_id) ?? 0) + 1)
+    })
+    return map
+  }, [myCoupons])
+
+  async function claimCoupon(templateId: number) {
+    try {
+      await promotionService.claimCoupon(templateId)
+      message.success('优惠券领取成功')
+      await loadCoupons()
+    } catch (error) {
+      message.error(`领取失败：${pickErrorMessage(error) ?? '请确认已登录且未超过领取限制'}`)
+    }
+  }
+
+  function scopeText(scopeType: string, scopeIds: number[]) {
+    const label = SCOPE_TEXT[scopeType] ?? scopeType
+    if (scopeIds.length === 0) return `${label}（全部）`
+    return `${label} [${scopeIds.join(',')}]`
+  }
+
   if (!authService.hasToken()) {
     return (
       <div className="uc-page">
@@ -179,6 +241,7 @@ export function UserCenterPage() {
   const TABS: { key: SectionTab; label: string; icon: React.ReactNode }[] = [
     { key: 'profile', label: '个人资料', icon: <EditOutlined /> },
     { key: 'points', label: '积分与会员', icon: <GiftOutlined /> },
+    { key: 'coupons', label: `优惠券 (${myCoupons.length})`, icon: <TagOutlined /> },
     { key: 'favorites', label: `商品收藏 (${favoriteProducts.length})`, icon: <HeartOutlined /> },
     { key: 'follows', label: `关注店铺 (${followedMerchants.length})`, icon: <ShopOutlined /> },
   ]
@@ -438,6 +501,96 @@ export function UserCenterPage() {
                     </List.Item>
                   )}
                 />
+              </Card>
+            </>
+          )}
+
+          {/* Coupons Tab */}
+          {activeTab === 'coupons' && (
+            <>
+              {/* Claimable Coupons */}
+              <Card
+                className="uc-card"
+                title={
+                  <div className="uc-card-title-row">
+                    <span className="uc-card-title"><TagOutlined /> 可领取优惠券</span>
+                    <Button size="small" icon={<ReloadOutlined />} onClick={() => void loadCoupons()}>刷新</Button>
+                  </div>
+                }
+              >
+                {couponTemplates.length === 0 ? (
+                  <Empty description="暂无可领取的优惠券" image={Empty.PRESENTED_IMAGE_SIMPLE} style={{ padding: '40px 0' }} />
+                ) : (
+                  <div className="uc-coupon-claim-grid">
+                    {couponTemplates.map((template) => {
+                      const claimedCount = claimedCountByTemplateId.get(template.id) ?? 0
+                      const reachedUserLimit = claimedCount >= template.per_user_limit
+                      const soldOut = template.total_quantity !== 0 && template.claimed_quantity >= template.total_quantity
+                      const claimable = template.status === 'active' && !reachedUserLimit && !soldOut
+                      return (
+                        <div key={template.id} className={`uc-coupon-claim-card ${!claimable ? 'uc-coupon-claim-disabled' : ''}`}>
+                          <div className="uc-coupon-claim-left">
+                            <span className="uc-coupon-claim-amount">¥{yuan(template.discount_value)}</span>
+                            <span className="uc-coupon-claim-min">满¥{yuan(template.min_amount_cent)}可用</span>
+                          </div>
+                          <div className="uc-coupon-claim-right">
+                            <Text className="uc-coupon-claim-name" ellipsis>{template.name}</Text>
+                            <Tag className="uc-coupon-scope-tag">{scopeText(template.scope_type, template.scope_ids)}</Tag>
+                            <div className="uc-coupon-claim-meta">
+                              <span>已领 {template.claimed_quantity}/{template.total_quantity || '不限'}</span>
+                              <span>限领 {template.per_user_limit}</span>
+                            </div>
+                            {template.valid_to && (
+                              <span className="uc-coupon-claim-date">截止 {template.valid_to.slice(0, 10)}</span>
+                            )}
+                          </div>
+                          <Button
+                            size="small"
+                            type="primary"
+                            disabled={!claimable}
+                            onClick={() => void claimCoupon(template.id)}
+                            className="btn-uc-primary"
+                          >
+                            {reachedUserLimit ? '已领取' : soldOut ? '已领完' : '领取'}
+                          </Button>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </Card>
+
+              {/* My Coupons */}
+              <Card className="uc-card" title={<span className="uc-card-title">我的优惠券</span>}>
+                {myCoupons.length === 0 ? (
+                  <Empty description="暂无优惠券，去领取一张吧" image={Empty.PRESENTED_IMAGE_SIMPLE} style={{ padding: '40px 0' }} />
+                ) : (
+                  <div className="uc-coupon-mine-grid">
+                    {myCoupons.map((coupon) => {
+                      const statusMeta = COUPON_STATUS_TEXT[coupon.status] ?? { text: coupon.status, cls: 'uc-coupon-status-used' }
+                      return (
+                        <div key={coupon.id} className={`uc-coupon-mine-card ${statusMeta.cls}`}>
+                          <div className="uc-coupon-mine-left">
+                            <span className="uc-coupon-mine-amount">¥{yuan(coupon.template.discount_value)}</span>
+                            <span className="uc-coupon-mine-min">满¥{yuan(coupon.template.min_amount_cent)}可用</span>
+                          </div>
+                          <div className="uc-coupon-mine-right">
+                            <Text className="uc-coupon-mine-name" ellipsis>{coupon.template.name}</Text>
+                            <Tag className="uc-coupon-scope-tag">{scopeText(coupon.template.scope_type, coupon.template.scope_ids)}</Tag>
+                            <div className="uc-coupon-mine-meta">
+                              <span>#{coupon.id}</span>
+                              <span>领取 {coupon.claimed_at.slice(0, 10)}</span>
+                              {coupon.used_at && <span>使用 {coupon.used_at.slice(0, 10)}</span>}
+                            </div>
+                          </div>
+                          <div className="uc-coupon-mine-status">
+                            {statusMeta.text}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
               </Card>
             </>
           )}
