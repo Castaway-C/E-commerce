@@ -6,11 +6,15 @@ import {
   Card,
   DatePicker,
   Empty,
+  Form,
   Image,
   Input,
   List,
+  Modal,
+  Popconfirm,
   Select,
   Spin,
+  Switch,
   Tag,
   Typography,
   Upload,
@@ -19,10 +23,17 @@ import {
 import type { UploadProps } from 'antd'
 import {
   CalendarOutlined,
+  DeleteOutlined,
   EditOutlined,
+  EnvironmentOutlined,
   HeartOutlined,
   ShopOutlined,
   StarOutlined,
+  StarFilled,
+  PlusOutlined,
+  PhoneOutlined,
+  UserOutlined,
+  HomeOutlined,
   GiftOutlined,
   FireOutlined,
   CrownOutlined,
@@ -31,6 +42,7 @@ import {
 } from '@ant-design/icons'
 import dayjs from 'dayjs'
 
+import { addressService, type Address, type AddressPayload } from '../../services/address'
 import { authService, type MemberLevel, type PointsAccount, type PointsLog, type UserProfile } from '../../services/auth'
 import { productService, type MerchantFollowItem, type ProductFavoriteItem } from '../../services/product'
 import { promotionService, type CouponTemplate, type UserCoupon } from '../../services/promotion'
@@ -38,7 +50,7 @@ import { uploadService } from '../../services/upload'
 import { getApiErrorMessage } from '../../services/http'
 import { absoluteAssetUrl, pickErrorMessage, yuan } from '../../utils/format'
 
-const { Text } = Typography
+const { Text, Paragraph } = Typography
 
 const GENDER_OPTIONS = [
   { value: 'male', label: '男' },
@@ -64,7 +76,26 @@ const COUPON_STATUS_TEXT: Record<string, { text: string; cls: string }> = {
   void: { text: '已作废', cls: 'uc-coupon-status-used' },
 }
 
-type SectionTab = 'profile' | 'points' | 'favorites' | 'follows' | 'coupons'
+type AddressFormValues = {
+  receiver_name: string
+  receiver_mobile: string
+  province: string
+  city: string
+  district?: string
+  street?: string
+  detail_address: string
+  postal_code?: string
+  address_tag?: string
+  is_default?: boolean
+}
+
+type SectionTab = 'points' | 'coupons' | 'favorites' | 'follows' | 'addresses'
+
+function buildRegionText(address: Address) {
+  return [address.province, address.city, address.district ?? '', address.street ?? '']
+    .filter(Boolean)
+    .join(' ')
+}
 
 export function UserCenterPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null)
@@ -80,8 +111,14 @@ export function UserCenterPage() {
   const [favoriteProducts, setFavoriteProducts] = useState<ProductFavoriteItem[]>([])
   const [couponTemplates, setCouponTemplates] = useState<CouponTemplate[]>([])
   const [myCoupons, setMyCoupons] = useState<UserCoupon[]>([])
+  const [addresses, setAddresses] = useState<Address[]>([])
   const [loading, setLoading] = useState(false)
-  const [activeTab, setActiveTab] = useState<SectionTab>('profile')
+  const [activeTab, setActiveTab] = useState<SectionTab>('points')
+  const [profileModalOpen, setProfileModalOpen] = useState(false)
+  const [addressModalOpen, setAddressModalOpen] = useState(false)
+  const [editingAddressId, setEditingAddressId] = useState<number | undefined>()
+  const [addressForm] = Form.useForm<AddressFormValues>()
+  const [addressSubmitting, setAddressSubmitting] = useState(false)
 
   async function loadProfile() {
     const response = await authService.profile()
@@ -124,6 +161,15 @@ export function UserCenterPage() {
     setMyCoupons(myRes.data ?? [])
   }
 
+  async function loadAddresses() {
+    try {
+      const response = await addressService.listAddresses()
+      setAddresses(response.data ?? [])
+    } catch {
+      setAddresses([])
+    }
+  }
+
   async function loadAll() {
     if (!authService.hasToken()) return
     setLoading(true)
@@ -134,6 +180,7 @@ export function UserCenterPage() {
         loadFollowedMerchants(),
         loadFavoriteProducts(),
         loadCoupons(),
+        loadAddresses(),
       ])
     } catch (error) {
       message.error(`加载个人中心失败：${getApiErrorMessage(error)}`)
@@ -150,6 +197,8 @@ export function UserCenterPage() {
     void loadAll()
   }, [])
 
+  /* ── Profile Modal ── */
+
   async function updateProfile() {
     try {
       const response = await authService.updateProfile({
@@ -160,6 +209,7 @@ export function UserCenterPage() {
         avatar_url: profileAvatarUrl || null,
       })
       setProfile(response.data)
+      setProfileModalOpen(false)
       message.success('用户资料已更新')
     } catch (error) {
       message.error(`更新资料失败：${getApiErrorMessage(error)}`)
@@ -196,6 +246,8 @@ export function UserCenterPage() {
     },
   }
 
+  /* ── Favorites ── */
+
   async function removeFavoriteProduct(productId: number) {
     try {
       await productService.unfavoriteProduct(productId)
@@ -205,6 +257,8 @@ export function UserCenterPage() {
       message.error(`取消收藏失败：${getApiErrorMessage(error)}`)
     }
   }
+
+  /* ── Coupons ── */
 
   const claimedCountByTemplateId = useMemo(() => {
     const map = new Map<number, number>()
@@ -230,6 +284,98 @@ export function UserCenterPage() {
     return `${label} [${scopeIds.join(',')}]`
   }
 
+  /* ── Address ── */
+
+  function openCreateAddressModal() {
+    setEditingAddressId(undefined)
+    addressForm.resetFields()
+    addressForm.setFieldValue('is_default', addresses.length === 0)
+    setAddressModalOpen(true)
+  }
+
+  function openEditAddressModal(address: Address) {
+    setEditingAddressId(address.id)
+    addressForm.setFieldsValue({
+      receiver_name: address.receiver_name,
+      receiver_mobile: address.receiver_mobile,
+      province: address.province,
+      city: address.city,
+      district: address.district ?? '',
+      street: address.street ?? '',
+      detail_address: address.detail_address,
+      postal_code: address.postal_code ?? '',
+      address_tag: address.address_tag ?? '',
+      is_default: address.is_default,
+    })
+    setAddressModalOpen(true)
+  }
+
+  function closeAddressModal() {
+    setAddressModalOpen(false)
+    setEditingAddressId(undefined)
+    addressForm.resetFields()
+  }
+
+  async function handleAddressSubmit() {
+    let values: AddressFormValues
+    try {
+      values = await addressForm.validateFields()
+    } catch {
+      return
+    }
+    setAddressSubmitting(true)
+    const payload: AddressPayload = {
+      receiver_name: values.receiver_name,
+      receiver_mobile: values.receiver_mobile,
+      province: values.province,
+      city: values.city,
+      district: values.district || null,
+      street: values.street || null,
+      detail_address: values.detail_address,
+      postal_code: values.postal_code || null,
+      address_tag: values.address_tag || null,
+      is_default: values.is_default ?? (addresses.length === 0),
+    }
+    try {
+      if (editingAddressId) {
+        await addressService.updateAddress(editingAddressId, payload)
+        message.success('地址已修改')
+      } else {
+        await addressService.createAddress(payload)
+        message.success('地址已保存')
+      }
+      closeAddressModal()
+      await loadAddresses()
+    } catch (error) {
+      message.error(`保存地址失败：${pickErrorMessage(error) ?? '请求失败'}`)
+    } finally {
+      setAddressSubmitting(false)
+    }
+  }
+
+  async function handleSetDefaultAddress(addressId: number) {
+    try {
+      await addressService.updateAddress(addressId, { is_default: true })
+      message.success('默认地址已更新')
+      await loadAddresses()
+    } catch (error) {
+      message.error(`设置默认地址失败：${pickErrorMessage(error) ?? '请求失败'}`)
+    }
+  }
+
+  async function handleDeleteAddress(addressId: number) {
+    try {
+      await addressService.deleteAddress(addressId)
+      message.success('地址已删除')
+      if (editingAddressId === addressId) closeAddressModal()
+      await loadAddresses()
+    } catch (error) {
+      message.error(`删除地址失败：${pickErrorMessage(error) ?? '请求失败'}`)
+    }
+  }
+
+  /* ── Render ── */
+
   if (!authService.hasToken()) {
     return (
       <div className="uc-page">
@@ -239,9 +385,9 @@ export function UserCenterPage() {
   }
 
   const TABS: { key: SectionTab; label: string; icon: React.ReactNode }[] = [
-    { key: 'profile', label: '个人资料', icon: <EditOutlined /> },
     { key: 'points', label: '积分与会员', icon: <GiftOutlined /> },
     { key: 'coupons', label: `优惠券 (${myCoupons.length})`, icon: <TagOutlined /> },
+    { key: 'addresses', label: `收货地址 (${addresses.length})`, icon: <EnvironmentOutlined /> },
     { key: 'favorites', label: `商品收藏 (${favoriteProducts.length})`, icon: <HeartOutlined /> },
     { key: 'follows', label: `关注店铺 (${followedMerchants.length})`, icon: <ShopOutlined /> },
   ]
@@ -266,7 +412,18 @@ export function UserCenterPage() {
               </div>
             </Upload>
             <div className="uc-hero-info">
-              <h1 className="uc-hero-name">{profile?.nickname ?? '用户'}</h1>
+              <div className="uc-hero-name-row">
+                <h1 className="uc-hero-name">{profile?.nickname ?? '用户'}</h1>
+                <Button
+                  type="primary"
+                  size="small"
+                  icon={<EditOutlined />}
+                  className="btn-uc-edit-profile"
+                  onClick={() => setProfileModalOpen(true)}
+                >
+                  编辑资料
+                </Button>
+              </div>
               <div className="uc-hero-meta">
                 <Tag className="uc-tag-user-id">用户 #{profile?.id ?? '-'}</Tag>
                 {memberLevel && (
@@ -345,57 +502,6 @@ export function UserCenterPage() {
 
         {/* ── Tab Content ── */}
         <div className="uc-tab-content">
-          {/* Profile Tab */}
-          {activeTab === 'profile' && (
-            <Card className="uc-card" title={<span className="uc-card-title">编辑个人资料</span>}>
-              <div className="uc-form">
-                <div className="uc-form-row">
-                  <div className="uc-form-item">
-                    <Text type="secondary" className="uc-form-label">昵称</Text>
-                    <Input
-                      value={profileNickname}
-                      onChange={(e) => setProfileNickname(e.target.value)}
-                      placeholder="昵称"
-                    />
-                  </div>
-                  <div className="uc-form-item">
-                    <Text type="secondary" className="uc-form-label">性别</Text>
-                    <Select
-                      style={{ width: '100%' }}
-                      value={profileGender || undefined}
-                      onChange={(value) => setProfileGender(value ?? '')}
-                      options={GENDER_OPTIONS}
-                      placeholder="选择性别"
-                      allowClear
-                    />
-                  </div>
-                </div>
-                <div className="uc-form-row">
-                  <div className="uc-form-item">
-                    <Text type="secondary" className="uc-form-label">生日</Text>
-                    <DatePicker
-                      style={{ width: '100%' }}
-                      value={profileBirthday ? dayjs(profileBirthday) : undefined}
-                      onChange={(value) => setProfileBirthday(value ? value.format('YYYY-MM-DD') : '')}
-                      placeholder="选择生日"
-                    />
-                  </div>
-                  <div className="uc-form-item">
-                    <Text type="secondary" className="uc-form-label">邮箱</Text>
-                    <Input
-                      value={profileEmail}
-                      onChange={(e) => setProfileEmail(e.target.value)}
-                      placeholder="邮箱地址"
-                    />
-                  </div>
-                </div>
-                <Button type="primary" onClick={() => void updateProfile()} className="btn-uc-primary">
-                  保存资料
-                </Button>
-              </div>
-            </Card>
-          )}
-
           {/* Points & Member Tab */}
           {activeTab === 'points' && (
             <>
@@ -595,6 +701,125 @@ export function UserCenterPage() {
             </>
           )}
 
+          {/* Addresses Tab */}
+          {activeTab === 'addresses' && (
+            <Card
+              className="uc-card"
+              title={
+                <div className="uc-card-title-row">
+                  <span className="uc-card-title"><EnvironmentOutlined /> 收货地址</span>
+                  <Button
+                    type="primary"
+                    size="small"
+                    icon={<PlusOutlined />}
+                    className="btn-uc-primary"
+                    onClick={openCreateAddressModal}
+                  >
+                    新增地址
+                  </Button>
+                </div>
+              }
+            >
+              {addresses.length === 0 ? (
+                <Empty
+                  description="暂无收货地址"
+                  image={Empty.PRESENTED_IMAGE_SIMPLE}
+                  style={{ padding: '60px 0' }}
+                >
+                  <Button type="primary" icon={<PlusOutlined />} className="btn-uc-primary" onClick={openCreateAddressModal}>
+                    添加第一个地址
+                  </Button>
+                </Empty>
+              ) : (
+                <div className="uc-addr-cards">
+                  {addresses.map((address) => (
+                    <div
+                      key={address.id}
+                      className={`uc-addr-card ${address.is_default ? 'uc-addr-card-default' : ''}`}
+                    >
+                      <div className="uc-addr-card-accent" />
+                      <div className="uc-addr-card-body">
+                        <div className="uc-addr-card-top">
+                          <div className="uc-addr-card-user">
+                            <span className="uc-addr-card-name">
+                              <UserOutlined /> {address.receiver_name}
+                            </span>
+                            <span className="uc-addr-card-phone">
+                              <PhoneOutlined /> {address.receiver_mobile}
+                            </span>
+                          </div>
+                          <div className="uc-addr-card-tags">
+                            {address.is_default && (
+                              <Tag className="uc-addr-tag-default">
+                                <StarFilled /> 默认
+                              </Tag>
+                            )}
+                            {address.address_tag && (
+                              <Tag className="uc-addr-tag-label">
+                                <HomeOutlined /> {address.address_tag}
+                              </Tag>
+                            )}
+                            <Tag className="uc-addr-tag-id">#{address.id}</Tag>
+                          </div>
+                        </div>
+                        <div className="uc-addr-card-content">
+                          <div className="uc-addr-card-region">
+                            <EnvironmentOutlined className="uc-addr-region-icon" />
+                            <Text className="uc-addr-region-text">{buildRegionText(address)}</Text>
+                          </div>
+                          <Paragraph className="uc-addr-detail-text">{address.detail_address}</Paragraph>
+                          {address.postal_code && (
+                            <Text type="secondary" className="uc-addr-postal">邮编 {address.postal_code}</Text>
+                          )}
+                        </div>
+                        <div className="uc-addr-card-footer">
+                          {!address.is_default && (
+                            <Button
+                              type="link"
+                              size="small"
+                              icon={<StarOutlined />}
+                              onClick={() => void handleSetDefaultAddress(address.id)}
+                              className="uc-addr-action-btn"
+                            >
+                              设为默认
+                            </Button>
+                          )}
+                          <Button
+                            type="link"
+                            size="small"
+                            icon={<EditOutlined />}
+                            onClick={() => openEditAddressModal(address)}
+                            className="uc-addr-action-btn"
+                          >
+                            编辑
+                          </Button>
+                          <Popconfirm
+                            title="确认删除该地址？"
+                            description="删除后不可恢复"
+                            onConfirm={() => void handleDeleteAddress(address.id)}
+                            okText="删除"
+                            cancelText="取消"
+                            okButtonProps={{ danger: true }}
+                          >
+                            <Button
+                              type="link"
+                              size="small"
+                              danger
+                              icon={<DeleteOutlined />}
+                              className="uc-addr-action-btn"
+                            >
+                              删除
+                            </Button>
+                          </Popconfirm>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
+          )}
+
           {/* Favorites Tab */}
           {activeTab === 'favorites' && (
             <Card className="uc-card" title={<span className="uc-card-title">商品收藏</span>}>
@@ -672,6 +897,117 @@ export function UserCenterPage() {
           )}
         </div>
       </Spin>
+
+      {/* ── Edit Profile Modal ── */}
+      <Modal
+        open={profileModalOpen}
+        title="编辑个人资料"
+        onCancel={() => setProfileModalOpen(false)}
+        width={560}
+        footer={[
+          <Button key="cancel" onClick={() => setProfileModalOpen(false)}>取消</Button>,
+          <Button key="save" type="primary" onClick={() => void updateProfile()} className="btn-uc-primary">
+            保存资料
+          </Button>,
+        ]}
+      >
+        <div className="uc-form">
+          <div className="uc-form-row">
+            <div className="uc-form-item">
+              <Text type="secondary" className="uc-form-label">昵称</Text>
+              <Input
+                value={profileNickname}
+                onChange={(e) => setProfileNickname(e.target.value)}
+                placeholder="昵称"
+              />
+            </div>
+            <div className="uc-form-item">
+              <Text type="secondary" className="uc-form-label">性别</Text>
+              <Select
+                style={{ width: '100%' }}
+                value={profileGender || undefined}
+                onChange={(value) => setProfileGender(value ?? '')}
+                options={GENDER_OPTIONS}
+                placeholder="选择性别"
+                allowClear
+              />
+            </div>
+          </div>
+          <div className="uc-form-row">
+            <div className="uc-form-item">
+              <Text type="secondary" className="uc-form-label">生日</Text>
+              <DatePicker
+                style={{ width: '100%' }}
+                value={profileBirthday ? dayjs(profileBirthday) : undefined}
+                onChange={(value) => setProfileBirthday(value ? value.format('YYYY-MM-DD') : '')}
+                placeholder="选择生日"
+              />
+            </div>
+            <div className="uc-form-item">
+              <Text type="secondary" className="uc-form-label">邮箱</Text>
+              <Input
+                value={profileEmail}
+                onChange={(e) => setProfileEmail(e.target.value)}
+                placeholder="邮箱地址"
+              />
+            </div>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ── Create/Edit Address Modal ── */}
+      <Modal
+        open={addressModalOpen}
+        title={editingAddressId ? `编辑地址 #${editingAddressId}` : '新增收货地址'}
+        onCancel={closeAddressModal}
+        width={640}
+        footer={[
+          <Button key="cancel" onClick={closeAddressModal}>取消</Button>,
+          <Button key="reset" onClick={() => addressForm.resetFields()}>重置</Button>,
+          <Button
+            key="submit"
+            type="primary"
+            loading={addressSubmitting}
+            onClick={() => void handleAddressSubmit()}
+            className="btn-uc-primary"
+          >
+            {editingAddressId ? '保存修改' : '保存地址'}
+          </Button>,
+        ]}
+      >
+        <Form form={addressForm} layout="vertical" className="uc-addr-form">
+          <Form.Item name="receiver_name" label="收货人" rules={[{ required: true, message: '请输入收货人姓名' }]}>
+            <Input placeholder="收货人姓名" prefix={<UserOutlined />} />
+          </Form.Item>
+          <Form.Item name="receiver_mobile" label="手机号" rules={[{ required: true, message: '请输入收货人手机号' }]}>
+            <Input placeholder="收货人手机号" prefix={<PhoneOutlined />} />
+          </Form.Item>
+          <Form.Item name="province" label="省" rules={[{ required: true, message: '请输入省' }]}>
+            <Input placeholder="例如：广东省" />
+          </Form.Item>
+          <Form.Item name="city" label="市" rules={[{ required: true, message: '请输入市' }]}>
+            <Input placeholder="例如：广州市" />
+          </Form.Item>
+          <Form.Item name="district" label="区县">
+            <Input placeholder="例如：天河区" />
+          </Form.Item>
+          <Form.Item name="street" label="街道">
+            <Input placeholder="街道/乡镇" />
+          </Form.Item>
+          <Form.Item name="detail_address" label="详细地址" rules={[{ required: true, message: '请输入详细地址' }]}>
+            <Input.TextArea placeholder="楼栋、门牌等详细地址" autoSize={{ minRows: 2, maxRows: 4 }} />
+          </Form.Item>
+          <Form.Item name="postal_code" label="邮政编码">
+            <Input placeholder="邮政编码" />
+          </Form.Item>
+          <Form.Item name="address_tag" label="地址标签">
+            <Input placeholder="例如：家、公司" />
+          </Form.Item>
+          <Form.Item name="is_default" valuePropName="checked">
+            <Switch checkedChildren="设为默认地址" unCheckedChildren="非默认" />
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   )
 }

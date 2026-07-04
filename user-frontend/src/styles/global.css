@@ -3614,6 +3614,200 @@ pre {
   }
 }
 
+/* ── User Center Address Tab (embedded) ── */
+
+.uc-addr-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.uc-addr-card {
+  display: flex;
+  background: #fff;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+  transition: all 0.2s ease;
+}
+
+.uc-addr-card:hover {
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.08);
+  border-color: rgba(53, 152, 255, 0.2);
+}
+
+.uc-addr-card-default {
+  border-color: rgba(53, 152, 255, 0.3);
+  box-shadow: var(--ec-blue-glow-sm);
+}
+
+.uc-addr-card-accent {
+  width: 4px;
+  flex-shrink: 0;
+  background: #e2e8f0;
+}
+
+.uc-addr-card-default .uc-addr-card-accent {
+  background: var(--ec-blue);
+  box-shadow: var(--ec-blue-glow-sm);
+}
+
+.uc-addr-card-body {
+  flex: 1;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.uc-addr-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.uc-addr-card-user {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.uc-addr-card-name {
+  font-size: 16px;
+  font-weight: 800;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.uc-addr-card-name .anticon {
+  color: var(--ec-blue);
+  font-size: 14px;
+}
+
+.uc-addr-card-phone {
+  font-size: 14px;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.uc-addr-card-tags {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.uc-addr-tag-default {
+  border: none !important;
+  background: var(--ec-blue) !important;
+  color: #fff !important;
+  font-weight: 700;
+  font-size: 11px !important;
+  padding: 0 10px !important;
+  border-radius: 10px !important;
+  display: inline-flex !important;
+  align-items: center;
+  gap: 4px;
+  box-shadow: var(--ec-blue-glow-sm);
+}
+
+.uc-addr-tag-label {
+  border: none !important;
+  background: rgba(139, 92, 246, 0.08) !important;
+  color: #7c3aed !important;
+  font-weight: 600;
+  font-size: 11px !important;
+  padding: 0 8px !important;
+  border-radius: 10px !important;
+  display: inline-flex !important;
+  align-items: center;
+  gap: 4px;
+}
+
+.uc-addr-tag-id {
+  border: none !important;
+  background: #f1f5f9 !important;
+  color: #94a3b8 !important;
+  font-size: 11px !important;
+  padding: 0 6px !important;
+  border-radius: 10px !important;
+  font-weight: 600;
+}
+
+.uc-addr-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.uc-addr-card-region {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.uc-addr-region-icon {
+  color: var(--ec-blue) !important;
+  font-size: 14px;
+}
+
+.uc-addr-region-text {
+  font-size: 14px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.uc-addr-detail-text {
+  margin: 0 !important;
+  font-size: 14px;
+  color: #475569;
+  line-height: 1.6;
+}
+
+.uc-addr-postal {
+  font-size: 12px;
+}
+
+.uc-addr-card-footer {
+  display: flex;
+  gap: 4px;
+  padding-top: 8px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.uc-addr-action-btn {
+  font-weight: 600 !important;
+  padding: 0 12px !important;
+  height: 32px !important;
+}
+
+.uc-addr-form .ant-input-affix-wrapper,
+.uc-addr-form .ant-input {
+  border-radius: 10px;
+}
+
+.uc-addr-form .ant-input-affix-wrapper:hover,
+.uc-addr-form .ant-input:hover {
+  border-color: var(--ec-blue) !important;
+}
+
+.uc-addr-form .ant-input-affix-wrapper-focused,
+.uc-addr-form .ant-input-focused {
+  border-color: var(--ec-blue) !important;
+  box-shadow: 0 0 0 2px rgba(53, 152, 255, 0.15) !important;
+}
+
+.uc-addr-form .ant-switch-checked {
+  background: var(--ec-blue) !important;
+}
+
 /* =============================================
    User Center Page
    ============================================= */
@@ -3693,12 +3887,37 @@ pre {
   min-width: 0;
 }
 
+.uc-hero-name-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
 .uc-hero-name {
-  margin: 0 0 8px;
+  margin: 0;
   font-size: 22px;
   font-weight: 900;
   color: #fff;
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.btn-uc-edit-profile {
+  background: rgba(255, 255, 255, 0.2) !important;
+  border: 1px solid rgba(255, 255, 255, 0.4) !important;
+  color: #fff !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  border-radius: 14px !important;
+  height: 28px !important;
+  padding: 0 14px !important;
+  backdrop-filter: blur(4px);
+  transition: all 0.2s ease;
+}
+
+.btn-uc-edit-profile:hover {
+  background: rgba(255, 255, 255, 0.35) !important;
+  border-color: rgba(255, 255, 255, 0.6) !important;
 }
 
 .uc-hero-meta {

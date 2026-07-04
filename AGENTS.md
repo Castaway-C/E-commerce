@@ -70,7 +70,7 @@
 ## 前端约定
 
 - 用户端已从单体测试控制台拆为 11 个独立页面（2026-07-03），不再是联调工作台。
-- 用户端路由：`/` 首页、`/login` 登录、`/register` 注册、`/products` 商品列表、`/products/:productId` 商品详情、`/group-buy` 拼团、`/cart` 购物车、`/checkout` 结算、`/orders` 订单、`/community` 社区、`/promotions` 优惠券（已重定向至 `/user`）、`/addresses` 地址、`/user` 用户中心（含优惠券 Tab）、`/merchants/:merchantId` 店铺主页。
+- 用户端路由：`/` 首页、`/login` 登录、`/register` 注册、`/products` 商品列表、`/products/:productId` 商品详情、`/group-buy` 拼团、`/cart` 购物车、`/checkout` 结算、`/orders` 订单、`/community` 社区、`/promotions` 优惠券（已重定向至 `/user`）、`/addresses` 地址（已重定向至 `/user`）、`/user` 用户中心（含优惠券 Tab 和收货地址 Tab）、`/merchants/:merchantId` 店铺主页。
 - 用户端公共工具函数提取到 `user-frontend/src/utils/format.ts`，所有页面共用，新页面应从 `../../utils` 导入而非重复定义。
 - 原测试控制台代码保留在 `user-frontend/src/pages/test-console/index.tsx` 作为功能完整性参考，不再被路由引用，新功能不要回写到测试控制台。
 - 管理端仍是联调工作台：`/platform` 是平台运营页；`/merchant` 是商家运营页；`/merchant-apply` 是商家入驻页。管理端后续需要拆分。

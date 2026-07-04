@@ -28,7 +28,7 @@ export function AppRoutes() {
       <Route path="/orders" element={<OrderPage />} />
       <Route path="/community" element={<CommunityPage />} />
       <Route path="/promotions" element={<Navigate to="/user" replace />} />
-      <Route path="/addresses" element={<AddressPage />} />
+      <Route path="/addresses" element={<Navigate to="/user" replace />} />
       <Route path="/user" element={<UserCenterPage />} />
       <Route path="/merchants/:merchantId" element={<MerchantPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
