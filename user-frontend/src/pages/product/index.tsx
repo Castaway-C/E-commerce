@@ -287,7 +287,6 @@ export function ProductPage() {
                           ) : null}
                         </div>
                         <div className="pec-footer">
-                          <Text type="secondary" className="pec-sales">已售 {product.sales_count}</Text>
                           <span className="pec-action">查看详情 →</span>
                         </div>
                       </div>

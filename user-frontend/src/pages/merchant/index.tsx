@@ -311,7 +311,6 @@ export function MerchantPage() {
                     <Text className="shop-product-name" ellipsis>{product.name}</Text>
                     <div className="shop-product-meta">
                       <Tag className="shop-product-tag-id">#{product.id}</Tag>
-                      <span className="shop-product-sales">销量 {product.sales_count}</span>
                     </div>
                     <div className="shop-product-price-row">
                       <span className="shop-product-price">¥{yuan(product.price_cent)}</span>
