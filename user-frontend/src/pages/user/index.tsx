@@ -454,54 +454,24 @@ export function UserCenterPage() {
           </div>
         </div>
 
-        {/* ── Stats Row ── */}
-        <div className="uc-stats">
-          <div className="uc-stat-card">
-            <div className="uc-stat-icon uc-stat-points"><GiftOutlined /></div>
-            <div className="uc-stat-body">
-              <span className="uc-stat-value">{pointsAccount?.points ?? profile?.points ?? 0}</span>
-              <span className="uc-stat-label">积分余额</span>
-            </div>
-          </div>
-          <div className="uc-stat-card">
-            <div className="uc-stat-icon uc-stat-growth"><StarOutlined /></div>
-            <div className="uc-stat-body">
-              <span className="uc-stat-value">{memberLevel?.growth_value_cent ?? 0}</span>
-              <span className="uc-stat-label">成长值</span>
-            </div>
-          </div>
-          <div className="uc-stat-card">
-            <div className="uc-stat-icon uc-stat-streak"><FireOutlined /></div>
-            <div className="uc-stat-body">
-              <span className="uc-stat-value">{pointsAccount?.current_streak_days ?? 0}</span>
-              <span className="uc-stat-label">连续签到</span>
-            </div>
-          </div>
-          <div className="uc-stat-card">
-            <div className="uc-stat-icon uc-stat-fav"><HeartOutlined /></div>
-            <div className="uc-stat-body">
-              <span className="uc-stat-value">{favoriteProducts.length}</span>
-              <span className="uc-stat-label">商品收藏</span>
-            </div>
-          </div>
-        </div>
+        {/* ── Main Layout: Sidebar + Content ── */}
+        <div className="uc-main-layout">
+          {/* ── Left Sidebar ── */}
+          <aside className="uc-sidebar">
+            {TABS.map((tab) => (
+              <button
+                key={tab.key}
+                className={`uc-sidebar-item ${activeTab === tab.key ? 'uc-sidebar-item-active' : ''}`}
+                onClick={() => setActiveTab(tab.key)}
+              >
+                <span className="uc-sidebar-icon">{tab.icon}</span>
+                <span className="uc-sidebar-label">{tab.label}</span>
+              </button>
+            ))}
+          </aside>
 
-        {/* ── Tab Bar ── */}
-        <div className="uc-tabs">
-          {TABS.map((tab) => (
-            <button
-              key={tab.key}
-              className={`uc-tab ${activeTab === tab.key ? 'uc-tab-active' : ''}`}
-              onClick={() => setActiveTab(tab.key)}
-            >
-              {tab.icon}
-              <span>{tab.label}</span>
-            </button>
-          ))}
-        </div>
-
-        {/* ── Tab Content ── */}
-        <div className="uc-tab-content">
+          {/* ── Right Content ── */}
+          <div className="uc-content">
           {/* Points & Member Tab */}
           {activeTab === 'points' && (
             <>
@@ -889,6 +859,7 @@ export function UserCenterPage() {
               )}
             </Card>
           )}
+          </div>
         </div>
       </Spin>
 
