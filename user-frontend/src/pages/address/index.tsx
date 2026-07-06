@@ -7,6 +7,7 @@ import {
   Input,
   Modal,
   Popconfirm,
+  Select,
   Switch,
   Tag,
   Typography,
@@ -27,6 +28,7 @@ import {
 import { addressService, type Address, type AddressPayload } from '../../services/address'
 import { authService } from '../../services/auth'
 import { pickErrorMessage } from '../../utils/format'
+import { REGION_DATA } from '../../utils/region-data'
 
 const { Text, Paragraph } = Typography
 
@@ -56,6 +58,8 @@ export function AddressPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [notice, setNotice] = useState('')
   const [loading, setLoading] = useState(false)
+  const [selectedProvince, setSelectedProvince] = useState<string>('')
+  const [selectedCity, setSelectedCity] = useState<string>('')
 
   async function loadAddresses() {
     if (!authService.hasToken()) {
@@ -79,11 +83,15 @@ export function AddressPage() {
     setEditingAddressId(undefined)
     form.resetFields()
     form.setFieldValue('is_default', addresses.length === 0)
+    setSelectedProvince('')
+    setSelectedCity('')
     setModalOpen(true)
   }
 
   function openEditModal(address: Address) {
     setEditingAddressId(address.id)
+    setSelectedProvince(address.province)
+    setSelectedCity(address.city)
     form.setFieldsValue({
       receiver_name: address.receiver_name,
       receiver_mobile: address.receiver_mobile,
@@ -335,17 +343,44 @@ export function AddressPage() {
           <Form.Item name="receiver_name" label="收货人" rules={[{ required: true, message: '请输入收货人姓名' }]}>
             <Input placeholder="收货人姓名" prefix={<UserOutlined />} />
           </Form.Item>
-          <Form.Item name="receiver_mobile" label="手机号" rules={[{ required: true, message: '请输入收货人手机号' }]}>
+          <Form.Item name="receiver_mobile" label="手机号" rules={[{ required: true, message: '请输入收货人手机号' }, { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的11位手机号' }]}>
             <Input placeholder="收货人手机号" prefix={<PhoneOutlined />} />
           </Form.Item>
-          <Form.Item name="province" label="省" rules={[{ required: true, message: '请输入省' }]}>
-            <Input placeholder="例如：广东省" />
+          <Form.Item name="province" label="省" rules={[{ required: true, message: '请选择省' }]}>
+            <Select
+              showSearch
+              placeholder="请选择省"
+              optionFilterProp="label"
+              onChange={(value: string) => {
+                setSelectedProvince(value)
+                setSelectedCity('')
+                form.setFieldValue('city', undefined)
+                form.setFieldValue('district', undefined)
+              }}
+              options={REGION_DATA.map((p) => ({ value: p.value, label: p.label }))}
+            />
           </Form.Item>
-          <Form.Item name="city" label="市" rules={[{ required: true, message: '请输入市' }]}>
-            <Input placeholder="例如：广州市" />
+          <Form.Item name="city" label="市" rules={[{ required: true, message: '请选择市' }]}>
+            <Select
+              showSearch
+              placeholder="请选择市"
+              optionFilterProp="label"
+              disabled={!selectedProvince}
+              onChange={(value: string) => {
+                setSelectedCity(value)
+                form.setFieldValue('district', undefined)
+              }}
+              options={REGION_DATA.find((p) => p.value === selectedProvince)?.children?.map((c) => ({ value: c.value, label: c.label })) ?? []}
+            />
           </Form.Item>
           <Form.Item name="district" label="区县">
-            <Input placeholder="例如：天河区" />
+            <Select
+              showSearch
+              placeholder="请选择区县"
+              optionFilterProp="label"
+              disabled={!selectedCity}
+              options={REGION_DATA.find((p) => p.value === selectedProvince)?.children?.find((c) => c.value === selectedCity)?.children?.map((d) => ({ value: d.value, label: d.label })) ?? []}
+            />
           </Form.Item>
           <Form.Item name="street" label="街道">
             <Input placeholder="街道/乡镇" />

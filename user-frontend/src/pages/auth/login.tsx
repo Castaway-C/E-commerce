@@ -69,7 +69,10 @@ export function LoginPage() {
           >
             <Form.Item
               name="account"
-              rules={[{ required: true, message: '请输入手机号' }]}
+              rules={[
+                { required: true, message: '请输入手机号' },
+                { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的11位手机号' },
+              ]}
             >
               <Input
                 prefix={<MobileOutlined />}

@@ -6,30 +6,52 @@ import {
   Card,
   Divider,
   Empty,
+  Form,
+  Input,
   InputNumber,
+  Modal,
   QRCode,
   Radio,
   Select,
   Spin,
+  Switch,
   Tag,
   Typography,
+  message as antdMessage,
 } from 'antd'
 import {
   CreditCardOutlined,
   EnvironmentOutlined,
   FireOutlined,
+  PlusOutlined,
+  PhoneOutlined,
   ShoppingCartOutlined,
   TeamOutlined,
+  UserOutlined,
 } from '@ant-design/icons'
 
-import { addressService, type Address } from '../../services/address'
+import { addressService, type Address, type AddressPayload } from '../../services/address'
 import { authService, type PointsAccount, type UserProfile } from '../../services/auth'
 import { getApiErrorMessage } from '../../services/http'
 import { groupBuyService, type GroupBuyActivity, type GroupBuyGroup } from '../../services/groupBuy'
 import { orderService, type CheckoutResult, type Payment } from '../../services/order'
 import { pickErrorMessage, randomToken, statusColor, statusText, yuan } from '../../utils/format'
+import { REGION_DATA } from '../../utils/region-data'
 
 const { Text, Title, Paragraph } = Typography
+
+type AddressFormValues = {
+  receiver_name: string
+  receiver_mobile: string
+  province: string
+  city: string
+  district?: string
+  street?: string
+  detail_address: string
+  postal_code?: string
+  address_tag?: string
+  is_default?: boolean
+}
 
 type GroupBuyMode =
   | { kind: 'start'; activityId: number }
@@ -75,6 +97,13 @@ export function CheckoutPage() {
   const [createdInfo, setCreatedInfo] = useState('')
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
+
+  // ===== New Address Modal =====
+  const [addrModalOpen, setAddrModalOpen] = useState(false)
+  const [addrForm] = Form.useForm<AddressFormValues>()
+  const [addrSubmitting, setAddrSubmitting] = useState(false)
+  const [addrProvince, setAddrProvince] = useState<string>('')
+  const [addrCity, setAddrCity] = useState<string>('')
 
   const isGroupBuyMode = groupBuyMode !== null
   const availablePoints = pointsAccount?.points ?? profile?.points ?? 0
@@ -278,21 +307,80 @@ export function CheckoutPage() {
     }
   }
 
+  // ===== New Address handlers =====
+  function openAddrModal() {
+    addrForm.resetFields()
+    addrForm.setFieldValue('is_default', true)
+    setAddrProvince('')
+    setAddrCity('')
+    setAddrModalOpen(true)
+  }
+
+  function closeAddrModal() {
+    setAddrModalOpen(false)
+    addrForm.resetFields()
+  }
+
+  async function handleAddrSubmit() {
+    let values: AddressFormValues
+    try {
+      values = await addrForm.validateFields()
+    } catch {
+      return
+    }
+    setAddrSubmitting(true)
+    const payload: AddressPayload = {
+      receiver_name: values.receiver_name,
+      receiver_mobile: values.receiver_mobile,
+      province: values.province,
+      city: values.city,
+      district: values.district || null,
+      street: values.street || null,
+      detail_address: values.detail_address,
+      postal_code: values.postal_code || null,
+      address_tag: values.address_tag || null,
+      is_default: values.is_default ?? true,
+    }
+    try {
+      const response = await addressService.createAddress(payload)
+      const newAddressId = response.data?.id
+      closeAddrModal()
+      // Refresh addresses and auto-select the new one
+      if (isGroupBuyMode) {
+        const addressRes = await addressService.listAddresses()
+        const addressList = addressRes.data ?? []
+        setAddresses(addressList)
+        if (newAddressId) setSelectedAddressId(newAddressId)
+      } else {
+        await loadCheckout()
+        if (newAddressId) setSelectedAddressId(newAddressId)
+      }
+    } catch (error) {
+      antdMessage.error(`保存地址失败：${pickErrorMessage(error) ?? '请求失败'}`)
+    } finally {
+      setAddrSubmitting(false)
+    }
+  }
+
   // ===== Shared render helpers =====
   function renderAddressList(addressList: Address[]) {
     if (addressList.length === 0) {
       return (
         <div className="checkout-empty-block">
-          <Text type="secondary">暂无收货地址，请先到个人中心新增地址。</Text>
+          <Text type="secondary">暂无收货地址，</Text>
+          <Button type="link" size="small" icon={<PlusOutlined />} onClick={openAddrModal} style={{ padding: 0 }}>
+            新增收货地址
+          </Button>
         </div>
       )
     }
     return (
-      <Radio.Group
-        value={selectedAddressId ?? undefined}
-        onChange={(event) => setSelectedAddressId(event.target.value as number)}
-        className="checkout-address-list"
-      >
+      <>
+        <Radio.Group
+          value={selectedAddressId ?? undefined}
+          onChange={(event) => setSelectedAddressId(event.target.value as number)}
+          className="checkout-address-list"
+        >
         {addressList.map((address) => (
           <Radio key={address.id} value={address.id} className="checkout-address-radio">
             <div
@@ -320,6 +408,16 @@ export function CheckoutPage() {
           </Radio>
         ))}
       </Radio.Group>
+      <Button
+        type="dashed"
+        block
+        icon={<PlusOutlined />}
+        onClick={openAddrModal}
+        style={{ marginTop: 12 }}
+      >
+        新增收货地址
+      </Button>
+      </>
     )
   }
 
@@ -709,6 +807,80 @@ export function CheckoutPage() {
           </Card>
         ) : null}
       </Spin>
+
+      {/* ── New Address Modal ── */}
+      <Modal
+        open={addrModalOpen}
+        title="新增收货地址"
+        onCancel={closeAddrModal}
+        width={640}
+        footer={[
+          <Button key="cancel" onClick={closeAddrModal}>取消</Button>,
+          <Button key="submit" type="primary" loading={addrSubmitting} onClick={() => void handleAddrSubmit()}>
+            保存地址
+          </Button>,
+        ]}
+      >
+        <Form form={addrForm} layout="vertical">
+          <Form.Item name="receiver_name" label="收货人" rules={[{ required: true, message: '请输入收货人姓名' }]}>
+            <Input placeholder="收货人姓名" prefix={<UserOutlined />} />
+          </Form.Item>
+          <Form.Item name="receiver_mobile" label="手机号" rules={[{ required: true, message: '请输入收货人手机号' }, { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的11位手机号' }]}>
+            <Input placeholder="收货人手机号" prefix={<PhoneOutlined />} />
+          </Form.Item>
+          <Form.Item name="province" label="省" rules={[{ required: true, message: '请选择省' }]}>
+            <Select
+              showSearch
+              placeholder="请选择省"
+              optionFilterProp="label"
+              onChange={(value: string) => {
+                setAddrProvince(value)
+                setAddrCity('')
+                addrForm.setFieldValue('city', undefined)
+                addrForm.setFieldValue('district', undefined)
+              }}
+              options={REGION_DATA.map((p) => ({ value: p.value, label: p.label }))}
+            />
+          </Form.Item>
+          <Form.Item name="city" label="市" rules={[{ required: true, message: '请选择市' }]}>
+            <Select
+              showSearch
+              placeholder="请选择市"
+              optionFilterProp="label"
+              disabled={!addrProvince}
+              onChange={(value: string) => {
+                setAddrCity(value)
+                addrForm.setFieldValue('district', undefined)
+              }}
+              options={REGION_DATA.find((p) => p.value === addrProvince)?.children?.map((c) => ({ value: c.value, label: c.label })) ?? []}
+            />
+          </Form.Item>
+          <Form.Item name="district" label="区县">
+            <Select
+              showSearch
+              placeholder="请选择区县"
+              optionFilterProp="label"
+              disabled={!addrCity}
+              options={REGION_DATA.find((p) => p.value === addrProvince)?.children?.find((c) => c.value === addrCity)?.children?.map((d) => ({ value: d.value, label: d.label })) ?? []}
+            />
+          </Form.Item>
+          <Form.Item name="street" label="街道">
+            <Input placeholder="街道/乡镇" />
+          </Form.Item>
+          <Form.Item name="detail_address" label="详细地址" rules={[{ required: true, message: '请输入详细地址' }]}>
+            <Input.TextArea placeholder="楼栋、门牌等详细地址" autoSize={{ minRows: 2, maxRows: 4 }} />
+          </Form.Item>
+          <Form.Item name="postal_code" label="邮政编码">
+            <Input placeholder="邮政编码" />
+          </Form.Item>
+          <Form.Item name="address_tag" label="地址标签">
+            <Input placeholder="例如：家、公司" />
+          </Form.Item>
+          <Form.Item name="is_default" valuePropName="checked">
+            <Switch checkedChildren="设为默认地址" unCheckedChildren="非默认" />
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   )
 }

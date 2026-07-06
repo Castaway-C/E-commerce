@@ -13,7 +13,7 @@ import {
   Typography,
   message,
 } from 'antd'
-import { SearchOutlined } from '@ant-design/icons'
+import { ReloadOutlined, SearchOutlined } from '@ant-design/icons'
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { getApiErrorMessage } from '../../services/http'
@@ -213,18 +213,22 @@ export function ProductPage() {
                 { value: 'newest:desc', label: '最新上架' },
                 { value: 'price:asc', label: '价格升序' },
                 { value: 'price:desc', label: '价格降序' },
-                { value: 'sales:desc', label: '销量优先' },
               ]}
             />
           </div>
 
           <Button
-            type="primary"
-            icon={<SearchOutlined />}
-            onClick={() => loadProducts(categoryId, 1)}
+            icon={<ReloadOutlined />}
+            onClick={() => {
+              setKeyword('')
+              setCategoryId(undefined)
+              setMinPriceYuan(null)
+              setMaxPriceYuan(null)
+              setProductSort('newest:desc')
+            }}
             className="btn-filter-apply"
           >
-            筛选
+            重置
           </Button>
         </div>
       </div>

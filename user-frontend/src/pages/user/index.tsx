@@ -49,6 +49,7 @@ import { promotionService, type CouponTemplate, type UserCoupon } from '../../se
 import { uploadService } from '../../services/upload'
 import { getApiErrorMessage } from '../../services/http'
 import { absoluteAssetUrl, pickErrorMessage, yuan } from '../../utils/format'
+import { REGION_DATA } from '../../utils/region-data'
 
 const { Text, Paragraph } = Typography
 
@@ -119,6 +120,8 @@ export function UserCenterPage() {
   const [editingAddressId, setEditingAddressId] = useState<number | undefined>()
   const [addressForm] = Form.useForm<AddressFormValues>()
   const [addressSubmitting, setAddressSubmitting] = useState(false)
+  const [selectedProvince, setSelectedProvince] = useState<string>('')
+  const [selectedCity, setSelectedCity] = useState<string>('')
 
   async function loadProfile() {
     const response = await authService.profile()
@@ -290,11 +293,15 @@ export function UserCenterPage() {
     setEditingAddressId(undefined)
     addressForm.resetFields()
     addressForm.setFieldValue('is_default', addresses.length === 0)
+    setSelectedProvince('')
+    setSelectedCity('')
     setAddressModalOpen(true)
   }
 
   function openEditAddressModal(address: Address) {
     setEditingAddressId(address.id)
+    setSelectedProvince(address.province)
+    setSelectedCity(address.city)
     addressForm.setFieldsValue({
       receiver_name: address.receiver_name,
       receiver_mobile: address.receiver_mobile,
@@ -613,6 +620,14 @@ export function UserCenterPage() {
                             {template.valid_to && (
                               <span className="uc-coupon-claim-date">截止 {template.valid_to.slice(0, 10)}</span>
                             )}
+                            <div className="uc-coupon-usage">
+                              <span>满¥{yuan(template.min_amount_cent)}可用</span>
+                              <span>{scopeText(template.scope_type, template.scope_ids)}</span>
+                              {template.valid_from && template.valid_to && (
+                                <span>{template.valid_from.slice(0, 10)}~{template.valid_to.slice(0, 10)}</span>
+                              )}
+                              <span>每人限领 {template.per_user_limit} 张</span>
+                            </div>
                           </div>
                           <Button
                             size="small"
@@ -651,6 +666,13 @@ export function UserCenterPage() {
                               <span>#{coupon.id}</span>
                               <span>领取 {coupon.claimed_at.slice(0, 10)}</span>
                               {coupon.used_at && <span>使用 {coupon.used_at.slice(0, 10)}</span>}
+                            </div>
+                            <div className="uc-coupon-usage">
+                              <span>满¥{yuan(coupon.template.min_amount_cent)}可用</span>
+                              <span>{scopeText(coupon.template.scope_type, coupon.template.scope_ids)}</span>
+                              {coupon.template.valid_from && coupon.template.valid_to && (
+                                <span>{coupon.template.valid_from.slice(0, 10)}~{coupon.template.valid_to.slice(0, 10)}</span>
+                              )}
                             </div>
                           </div>
                           <div className="uc-coupon-mine-status">
@@ -944,17 +966,44 @@ export function UserCenterPage() {
           <Form.Item name="receiver_name" label="收货人" rules={[{ required: true, message: '请输入收货人姓名' }]}>
             <Input placeholder="收货人姓名" prefix={<UserOutlined />} />
           </Form.Item>
-          <Form.Item name="receiver_mobile" label="手机号" rules={[{ required: true, message: '请输入收货人手机号' }]}>
+          <Form.Item name="receiver_mobile" label="手机号" rules={[{ required: true, message: '请输入收货人手机号' }, { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的11位手机号' }]}>
             <Input placeholder="收货人手机号" prefix={<PhoneOutlined />} />
           </Form.Item>
-          <Form.Item name="province" label="省" rules={[{ required: true, message: '请输入省' }]}>
-            <Input placeholder="例如：广东省" />
+          <Form.Item name="province" label="省" rules={[{ required: true, message: '请选择省' }]}>
+            <Select
+              showSearch
+              placeholder="请选择省"
+              optionFilterProp="label"
+              onChange={(value: string) => {
+                setSelectedProvince(value)
+                setSelectedCity('')
+                addressForm.setFieldValue('city', undefined)
+                addressForm.setFieldValue('district', undefined)
+              }}
+              options={REGION_DATA.map((p) => ({ value: p.value, label: p.label }))}
+            />
           </Form.Item>
-          <Form.Item name="city" label="市" rules={[{ required: true, message: '请输入市' }]}>
-            <Input placeholder="例如：广州市" />
+          <Form.Item name="city" label="市" rules={[{ required: true, message: '请选择市' }]}>
+            <Select
+              showSearch
+              placeholder="请选择市"
+              optionFilterProp="label"
+              disabled={!selectedProvince}
+              onChange={(value: string) => {
+                setSelectedCity(value)
+                addressForm.setFieldValue('district', undefined)
+              }}
+              options={REGION_DATA.find((p) => p.value === selectedProvince)?.children?.map((c) => ({ value: c.value, label: c.label })) ?? []}
+            />
           </Form.Item>
           <Form.Item name="district" label="区县">
-            <Input placeholder="例如：天河区" />
+            <Select
+              showSearch
+              placeholder="请选择区县"
+              optionFilterProp="label"
+              disabled={!selectedCity}
+              options={REGION_DATA.find((p) => p.value === selectedProvince)?.children?.find((c) => c.value === selectedCity)?.children?.map((d) => ({ value: d.value, label: d.label })) ?? []}
+            />
           </Form.Item>
           <Form.Item name="street" label="街道">
             <Input placeholder="街道/乡镇" />

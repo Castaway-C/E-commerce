@@ -1,4 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
+import type { ReactNode } from 'react'
+
+import { authService } from '../services/auth'
 
 import { AddressPage } from '../pages/address'
 import { LoginPage } from '../pages/auth/login'
@@ -13,6 +16,13 @@ import { ProductDetailPage } from '../pages/product/detail'
 import { ProductPage } from '../pages/product'
 import { UserCenterPage } from '../pages/user'
 
+function RequireAuth({ children }: { children: ReactNode }) {
+  if (!authService.hasToken()) {
+    return <Navigate to="/login" replace />
+  }
+  return <>{children}</>
+}
+
 export function AppRoutes() {
   return (
     <Routes>
@@ -22,13 +32,13 @@ export function AppRoutes() {
       <Route path="/products" element={<Navigate to="/" replace />} />
       <Route path="/products/:productId" element={<ProductDetailPage />} />
       <Route path="/group-buy" element={<GroupBuyPage />} />
-      <Route path="/cart" element={<CartPage />} />
-      <Route path="/checkout" element={<CheckoutPage />} />
-      <Route path="/orders" element={<OrderPage />} />
+      <Route path="/cart" element={<RequireAuth><CartPage /></RequireAuth>} />
+      <Route path="/checkout" element={<RequireAuth><CheckoutPage /></RequireAuth>} />
+      <Route path="/orders" element={<RequireAuth><OrderPage /></RequireAuth>} />
       <Route path="/community" element={<CommunityPage />} />
       <Route path="/promotions" element={<Navigate to="/user" replace />} />
       <Route path="/addresses" element={<Navigate to="/user" replace />} />
-      <Route path="/user" element={<UserCenterPage />} />
+      <Route path="/user" element={<RequireAuth><UserCenterPage /></RequireAuth>} />
       <Route path="/merchants/:merchantId" element={<MerchantPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

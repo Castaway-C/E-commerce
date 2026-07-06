@@ -4860,6 +4860,17 @@ pre {
   color: #94a3b8;
 }
 
+.uc-coupon-usage {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 4px;
+  padding-top: 6px;
+  border-top: 1px dashed rgba(148, 163, 184, 0.15);
+}
+
 /* My Coupons Grid */
 .uc-coupon-mine-grid {
   display: flex;
