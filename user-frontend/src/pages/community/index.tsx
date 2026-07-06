@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Avatar,
   Button,
@@ -9,7 +10,6 @@ import {
   Input,
   List,
   Modal,
-  QRCode,
   Select,
   Space,
   Statistic,
@@ -42,7 +42,6 @@ import { uploadService } from '../../services/upload'
 import {
   absoluteAssetUrl,
   pickErrorMessage,
-  randomToken,
   splitTags,
   statusColor,
   statusText,
@@ -89,6 +88,7 @@ const POST_SECTION_OPTIONS = [
 ]
 
 export function CommunityPage() {
+  const navigate = useNavigate()
   const [posts, setPosts] = useState<CommunityPost[]>([])
   const [selectedPost, setSelectedPost] = useState<CommunityPost | null>(null)
   const [comments, setComments] = useState<CommunityComment[]>([])
@@ -107,15 +107,10 @@ export function CommunityPage() {
   const [postTopicTags, setPostTopicTags] = useState('体验')
   const [postImages, setPostImages] = useState<string[]>([])
   const [commentContent, setCommentContent] = useState('这是一条评论。')
-  const [alipayQrCode, setAlipayQrCode] = useState('')
   const [noticeText, setNoticeText] = useState('')
   const [showPostForm, setShowPostForm] = useState(false)
-  const [showSourceOrder, setShowSourceOrder] = useState(false)
   const [loading, setLoading] = useState(false)
   const [likedPosts, setLikedPosts] = useState<Set<number>>(new Set())
-
-  const [sourcePostId, setSourcePostId] = useState('')
-  const [sourceSkuId, setSourceSkuId] = useState('')
 
   const communityProductIds = useMemo(() => {
     const ids = new Set<number>()
@@ -302,40 +297,12 @@ export function CommunityPage() {
     }
   }
 
-  async function handleSourceOrder() {
-    setNoticeText('')
-    setAlipayQrCode('')
-    const postId = Number(sourcePostId)
-    const skuId = Number(sourceSkuId)
-    if (!Number.isFinite(postId) || postId <= 0) {
-      message.error('请输入有效的种草帖 ID')
-      return
-    }
-    if (!Number.isFinite(skuId) || skuId <= 0) {
-      message.error('请输入有效的 SKU ID')
-      return
-    }
-    try {
-      await orderService.addCartItem({ sku_id: skuId, quantity: 1, source_post_id: postId })
-      const response = await orderService.createOrder({
-        client_order_token: randomToken('community_source'),
-        source_post_id: postId,
-      })
-      const paymentId = response.data.payment_id
-      const alipayResponse = await orderService.precreateAlipay(paymentId)
-      setAlipayQrCode(alipayResponse.data.qr_code)
-      setNoticeText(
-        `来源订单已创建，请使用支付宝沙箱支付。支付单 ID：${paymentId}，订单 ID：${response.data.order_ids.join(',')}`,
-      )
-      message.success('来源订单已创建，请扫码支付')
-    } catch (error) {
-      const msg = getApiErrorMessage(error)
-      message.error(`来源下单失败：${msg}`)
-      setNoticeText(`来源下单失败：${msg}`)
-    }
+  function handleProductClick(productId: number, sourcePostId?: number) {
+    const url = sourcePostId ? `/products/${productId}?source_post_id=${sourcePostId}` : `/products/${productId}`
+    navigate(url)
   }
 
-  function renderCommunityProductCards(productIds: number[], compact = false) {
+  function renderCommunityProductCards(productIds: number[], compact = false, sourcePostId?: number) {
     if (productIds.length === 0) {
       return <Text type="secondary">暂无关联商品</Text>
     }
@@ -343,8 +310,14 @@ export function CommunityPage() {
       <div className={compact ? 'community-product-cards compact' : 'community-product-cards'}>
         {productIds.map((productId) => {
           const product = communityProductMap[productId]
+          const canSourceOrder = !!sourcePostId
           return (
-            <Card key={productId} size="small" className="community-product-card">
+            <Card
+              key={productId}
+              size="small"
+              className={`community-product-card ${canSourceOrder ? 'community-product-card-clickable' : ''}`}
+              onClick={() => void handleProductClick(productId, sourcePostId)}
+            >
               {product ? (
                 <Space size={10} align="center">
                   {product.cover_url ? (
@@ -432,7 +405,6 @@ export function CommunityPage() {
               发布
             </Button>
             <Button icon={<ReloadOutlined />} onClick={() => void loadPosts()}>刷新</Button>
-            <Button onClick={() => setShowSourceOrder(true)}>种草下单</Button>
           </div>
         </div>
       </div>
@@ -617,7 +589,7 @@ export function CommunityPage() {
             {selectedPost.product_ids.length > 0 && (
               <div className="comm-detail-products">
                 <Text strong className="comm-detail-section-title">关联商品</Text>
-                {renderCommunityProductCards(selectedPost.product_ids)}
+                {renderCommunityProductCards(selectedPost.product_ids, false, selectedPost.id)}
               </div>
             )}
 
@@ -750,45 +722,6 @@ export function CommunityPage() {
               发布种草帖
             </Button>
           </Space>
-        </div>
-      </Modal>
-
-      {/* ── Source Order Modal ── */}
-      <Modal
-        open={showSourceOrder}
-        title="种草来源下单"
-        onCancel={() => setShowSourceOrder(false)}
-        footer={null}
-        width={480}
-      >
-        <div className="comm-source-order">
-          <Input
-            value={sourcePostId}
-            onChange={(event) => setSourcePostId(event.target.value)}
-            placeholder="种草帖 ID"
-            className="comm-form-input"
-          />
-          <Input
-            value={sourceSkuId}
-            onChange={(event) => setSourceSkuId(event.target.value)}
-            placeholder="SKU ID"
-            className="comm-form-input"
-          />
-          <Button type="primary" block onClick={handleSourceOrder} className="btn-comm-primary">
-            加购并来源下单
-          </Button>
-          <Paragraph type="secondary" style={{ marginTop: 12, fontSize: 13 }}>
-            下单并完成支付宝沙箱支付后，到订单页同步支付结果并确认收货，种草帖作者会增加基础积分。
-          </Paragraph>
-          {alipayQrCode ? (
-            <div className="comm-source-qr">
-              <QRCode value={alipayQrCode} size={180} />
-              <Text type="secondary" style={{ fontSize: 12 }}>
-                请使用支付宝沙箱买家账号扫码付款
-              </Text>
-            </div>
-          ) : null}
-          {noticeText ? <Paragraph style={{ marginTop: 8 }}>{noticeText}</Paragraph> : null}
         </div>
       </Modal>
 

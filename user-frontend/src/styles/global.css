@@ -837,6 +837,16 @@ html {
   background: #f8fafc;
 }
 
+.community-product-card-clickable {
+  cursor: pointer;
+  transition: box-shadow 0.2s, border-color 0.2s;
+}
+
+.community-product-card-clickable:hover {
+  border-color: rgba(99, 102, 241, 0.5);
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.12);
+}
+
 .community-product-card .ant-card-body {
   padding: 10px;
 }

@@ -350,6 +350,9 @@ export function OrderPage() {
                       <Tag className="oc-tag-id">订单 #{order.id}</Tag>
                       <Text type="secondary" className="oc-order-no">{order.order_no}</Text>
                       {order.order_type ? <Tag className="oc-tag-type">{statusText(order.order_type)}</Tag> : null}
+                      {order.source_post_id && (
+                        <Tag color="purple">种草来源 #{order.source_post_id}</Tag>
+                      )}
                     </div>
                     <div className="oc-header-right">
                       <Badge color={statusColor(order.status)} text={<span className="oc-status-text">{statusText(order.status)}</span>} />

@@ -21,7 +21,7 @@ import {
   ArrowLeftOutlined,
 } from '@ant-design/icons'
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { authService } from '../../services/auth'
 import { getApiErrorMessage } from '../../services/http'
 import { orderService } from '../../services/order'
@@ -44,7 +44,9 @@ type PageData<T> = {
 
 export function ProductDetailPage() {
   const params = useParams<{ productId: string }>()
+  const [searchParams] = useSearchParams()
   const productId = params.productId ? Number(params.productId) : NaN
+  const sourcePostId = searchParams.get('source_post_id') ? Number(searchParams.get('source_post_id')) : undefined
 
   const [product, setProduct] = useState<ProductDetail | null>(null)
   const [reviews, setReviews] = useState<ProductReview[]>([])
@@ -135,6 +137,7 @@ export function ProductDetailPage() {
       await orderService.addCartItem({
         sku_id: selectedSku.id,
         quantity,
+        source_post_id: sourcePostId ?? undefined,
       })
       message.success('已加入购物车')
     } catch (error) {

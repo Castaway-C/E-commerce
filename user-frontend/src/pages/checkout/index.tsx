@@ -10,7 +10,6 @@ import {
   Input,
   InputNumber,
   Modal,
-  QRCode,
   Radio,
   Select,
   Spin,
@@ -20,7 +19,6 @@ import {
   message as antdMessage,
 } from 'antd'
 import {
-  CreditCardOutlined,
   EnvironmentOutlined,
   FireOutlined,
   PlusOutlined,
@@ -34,7 +32,7 @@ import { addressService, type Address, type AddressPayload } from '../../service
 import { authService, type PointsAccount, type UserProfile } from '../../services/auth'
 import { getApiErrorMessage } from '../../services/http'
 import { groupBuyService, type GroupBuyActivity, type GroupBuyGroup } from '../../services/groupBuy'
-import { orderService, type CheckoutResult, type Payment } from '../../services/order'
+import { orderService, type CheckoutResult } from '../../services/order'
 import { pickErrorMessage, randomToken, statusColor, statusText, yuan } from '../../utils/format'
 import { REGION_DATA } from '../../utils/region-data'
 
@@ -92,8 +90,6 @@ export function CheckoutPage() {
   const [pointsAccount, setPointsAccount] = useState<PointsAccount | null>(null)
 
   // ===== Shared state =====
-  const [paymentDetail, setPaymentDetail] = useState<Payment | null>(null)
-  const [alipayQrCode, setAlipayQrCode] = useState('')
   const [createdInfo, setCreatedInfo] = useState('')
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
@@ -109,7 +105,6 @@ export function CheckoutPage() {
   const availablePoints = pointsAccount?.points ?? profile?.points ?? 0
   const groupPointCap = Math.max(0, availablePoints)
   const groupTotalCent = activity ? activity.group_price_cent * groupQuantity : 0
-  const visibleAlipayQrCode = alipayQrCode || paymentDetail?.alipay_qr_code || ''
 
   // ===== Cart checkout =====
   async function loadCheckout() {
@@ -198,15 +193,14 @@ export function CheckoutPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isGroupBuyMode, groupBuyParam, groupJoinParam])
 
-  async function loadPaymentDetail(paymentId: number) {
-    try {
-      const response = await orderService.getPayment(paymentId)
-      setPaymentDetail(response.data)
-      setAlipayQrCode(response.data.alipay_qr_code || '')
-    } catch (error) {
-      setMessage(`加载支付单失败：${getApiErrorMessage(error)}`)
+  // 动态计算：满减/优惠券/积分变化时自动重新计算
+  useEffect(() => {
+    if (checkout && !isGroupBuyMode) {
+      const timer = setTimeout(() => void loadCheckout(), 300)
+      return () => clearTimeout(timer)
     }
-  }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedFullDiscountId, selectedUserCouponId, pointsToUse])
 
   async function handleSubmitCart() {
     if (!checkout || checkout.items.length === 0) {
@@ -214,32 +208,18 @@ export function CheckoutPage() {
       return
     }
     setMessage('')
-    setCreatedInfo('')
-    setAlipayQrCode('')
-    setPaymentDetail(null)
     setLoading(true)
     try {
-      const orderResponse = await orderService.createOrder({
+      const sourcePostId = checkout.items.find((item) => item.source_post_id)?.source_post_id
+      await orderService.createOrder({
         client_order_token: randomToken('order'),
         shipping_address_id: selectedAddressId,
         full_discount_id: selectedFullDiscountId ?? null,
         coupon_id: selectedUserCouponId ?? null,
         points_used: pointsToUse,
+        source_post_id: sourcePostId ?? undefined,
       })
-      const paymentId = orderResponse.data.payment_id
-      const orderIds = orderResponse.data.order_ids
-      setCreatedInfo(`支付单 ID：${paymentId}；订单 ID：${orderIds.join(', ')}`)
-      try {
-        const alipayResponse = await orderService.precreateAlipay(paymentId)
-        setAlipayQrCode(alipayResponse.data.qr_code)
-        await loadPaymentDetail(paymentId)
-        setMessage('订单已提交，请使用支付宝沙箱买家账号扫码支付。')
-      } catch (error) {
-        setMessage(`支付宝二维码生成失败：${pickErrorMessage(error) ?? '请求失败'}`)
-      }
-      setPointsToUse(0)
-      setSelectedUserCouponId(undefined)
-      await loadCheckout()
+      navigate('/orders')
     } catch (error) {
       setMessage(`提交订单失败：${pickErrorMessage(error) ?? '请求失败'}`)
     } finally {
@@ -261,45 +241,27 @@ export function CheckoutPage() {
       return
     }
     setMessage('')
-    setCreatedInfo('')
-    setAlipayQrCode('')
-    setPaymentDetail(null)
     setLoading(true)
     try {
       const safePoints = Math.min(Math.max(0, pointsToUse), groupPointCap)
-      const response =
-        groupBuyMode?.kind === 'start'
-          ? await groupBuyService.startGroup({
-              activity_id: activity.id,
-              quantity: groupQuantity,
-              shipping_address_id: selectedAddressId,
-              points_used: safePoints,
-              client_order_token: randomToken('group_start'),
-            })
-          : await groupBuyService.joinGroup({
-              group_id: group!.id,
-              quantity: groupQuantity,
-              shipping_address_id: selectedAddressId,
-              points_used: safePoints,
-              client_order_token: randomToken('group_join'),
-            })
-      const data = response.data
-      const paymentId = data.order.payment_id
-      const orderIds = data.order.order_ids
-      setCreatedInfo(
-        `支付单 ID：${paymentId}；订单 ID：${orderIds.join(', ')}；拼团 #${data.group.id}（${data.group.joined_count}/${data.group.group_size} 人）`,
-      )
-      try {
-        const alipayResponse = await orderService.precreateAlipay(paymentId)
-        setAlipayQrCode(alipayResponse.data.qr_code)
-        await loadPaymentDetail(paymentId)
-        setMessage(
-          groupBuyMode?.kind === 'start' ? '拼团已发起，请扫码完成支付。' : '已加入拼团，请扫码完成支付。',
-        )
-      } catch (error) {
-        setMessage(`支付宝二维码生成失败：${pickErrorMessage(error) ?? '请求失败'}`)
+      if (groupBuyMode?.kind === 'start') {
+        await groupBuyService.startGroup({
+          activity_id: activity.id,
+          quantity: groupQuantity,
+          shipping_address_id: selectedAddressId,
+          points_used: safePoints,
+          client_order_token: randomToken('group_start'),
+        })
+      } else {
+        await groupBuyService.joinGroup({
+          group_id: group!.id,
+          quantity: groupQuantity,
+          shipping_address_id: selectedAddressId,
+          points_used: safePoints,
+          client_order_token: randomToken('group_join'),
+        })
       }
-      setPointsToUse(0)
+      navigate('/orders')
     } catch (error) {
       setMessage(`拼团提交失败：${getApiErrorMessage(error)}`)
     } finally {
@@ -421,52 +383,6 @@ export function CheckoutPage() {
     )
   }
 
-  function renderCheckoutResult() {
-    if (!createdInfo) return null
-    return (
-      <Card className="checkout-result-card">
-        <div className="checkout-result-body">
-          <div className="checkout-result-header">
-            <CreditCardOutlined className="checkout-result-icon" />
-            <div>
-              <Text strong className="checkout-result-title">
-                订单已提交
-              </Text>
-              <Text type="secondary" className="checkout-result-info">
-                {createdInfo}
-              </Text>
-            </div>
-          </div>
-          {paymentDetail ? (
-            <div className="checkout-payment-status">
-              <Tag color="blue">支付单 #{paymentDetail.id}</Tag>
-              <Tag color={statusColor(paymentDetail.status)}>{statusText(paymentDetail.status)}</Tag>
-              <Text className="checkout-result-price">
-                应付 ￥{yuan(paymentDetail.pay_amount_cent)}
-              </Text>
-              {paymentDetail.points_used > 0 ? (
-                <Text type="secondary">
-                  积分抵扣 ￥{yuan(paymentDetail.points_discount_amount_cent)}（{paymentDetail.points_used} 分）
-                </Text>
-              ) : null}
-            </div>
-          ) : null}
-          {visibleAlipayQrCode ? (
-            <div className="checkout-qr-area">
-              <QRCode value={visibleAlipayQrCode} size={180} />
-              <Text type="secondary" className="checkout-qr-hint">
-                请使用支付宝沙箱买家账号扫码付款
-              </Text>
-              <Text copyable type="secondary" className="checkout-qr-raw">
-                {visibleAlipayQrCode}
-              </Text>
-            </div>
-          ) : null}
-        </div>
-      </Card>
-    )
-  }
-
   // ===== Group-buy mode render =====
   if (isGroupBuyMode) {
     const groupBuyReadyText = !authService.hasToken()
@@ -491,7 +407,7 @@ export function CheckoutPage() {
               )}
             </Title>
             <Paragraph className="checkout-header-sub">
-              选择收货地址、购买件数和积分抵扣后提交，将生成支付宝沙箱二维码。拼团不叠加满减或优惠券。
+              选择收货地址、购买件数和积分抵扣后提交。拼团不叠加满减或优惠券。
             </Paragraph>
           </header>
 
@@ -590,7 +506,7 @@ export function CheckoutPage() {
                       onClick={() => void handleSubmitGroupBuy()}
                       className="btn-checkout-submit"
                     >
-                      {groupBuyMode?.kind === 'start' ? '提交拼团并生成支付二维码' : '加入拼团并生成支付二维码'}
+                      提交订单
                     </Button>
                     <div className="checkout-back-actions">
                       <Button onClick={() => navigate('/group-buy')}>返回拼团专区</Button>
@@ -605,8 +521,6 @@ export function CheckoutPage() {
               <Empty description={message || '拼团活动不存在或已结束。'} />
             </Card>
           ) : null}
-
-          {renderCheckoutResult()}
 
           {message && !createdInfo ? (
             <Card size="small" className="checkout-message-card">
@@ -627,7 +541,7 @@ export function CheckoutPage() {
             <ShoppingCartOutlined /> 订单结算
           </Title>
           <Paragraph className="checkout-header-sub">
-            选择收货地址、满减、优惠券和积分抵扣后提交订单，将生成支付宝沙箱二维码。
+            选择收货地址、满减、优惠券和积分抵扣后提交订单。
           </Paragraph>
         </header>
 
@@ -776,15 +690,7 @@ export function CheckoutPage() {
                     onClick={() => void handleSubmitCart()}
                     className="btn-checkout-submit"
                   >
-                    提交订单并生成支付宝二维码
-                  </Button>
-                  <Button
-                    onClick={() => void loadCheckout()}
-                    loading={loading}
-                    block
-                    className="checkout-recalc-btn"
-                  >
-                    重新计算优惠与积分
+                    提交订单
                   </Button>
                   <Button onClick={() => navigate('/orders')} block>
                     查看订单
@@ -798,8 +704,6 @@ export function CheckoutPage() {
             <Empty description={message || '暂无可结算商品，请先在购物车勾选有效商品。'} />
           </Card>
         )}
-
-        {renderCheckoutResult()}
 
         {message && !createdInfo ? (
           <Card size="small" className="checkout-message-card">
