@@ -65,6 +65,7 @@ from app.schemas.promotion import (
     FullDiscountResponse,
     FullDiscountUpdateRequest,
 )
+from app.schemas.report import ReportOverviewResponse
 from app.services.admin_service import admin_service
 from app.services.admin_log_service import admin_log_service
 from app.services.auth_service import auth_service
@@ -74,6 +75,7 @@ from app.services.order_service import order_service
 from app.services.platform_setting_service import platform_setting_service
 from app.services.product_service import product_service
 from app.services.promotion_service import promotion_service
+from app.services.report_service import report_service
 from app.utils.response import ApiResponse, success
 
 router = APIRouter()
@@ -206,6 +208,22 @@ async def admin_dashboard_summary(
     current_admin: AdminUser = Depends(get_current_admin),
 ) -> ApiResponse[DashboardSummaryResponse]:
     return success(await admin_service.get_dashboard_summary(db, current_admin))
+
+
+@router.get("/reports/platform/overview", response_model=ApiResponse[ReportOverviewResponse])
+async def admin_platform_report_overview(
+    db: DbSession,
+    current_admin: AdminUser = Depends(get_current_admin),
+) -> ApiResponse[ReportOverviewResponse]:
+    return success(await report_service.get_overview(db, current_admin, "platform"))
+
+
+@router.get("/reports/merchant/overview", response_model=ApiResponse[ReportOverviewResponse])
+async def admin_merchant_report_overview(
+    db: DbSession,
+    current_admin: AdminUser = Depends(get_current_admin),
+) -> ApiResponse[ReportOverviewResponse]:
+    return success(await report_service.get_overview(db, current_admin, "merchant"))
 
 
 @router.get("/users", response_model=ApiResponse[dict])

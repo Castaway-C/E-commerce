@@ -1,4 +1,5 @@
-from app.models.community import CommunityComment, CommunityLike, CommunityPost, GrassConversionReward
+from app.models.community import CommunityComment, CommunityLike, CommunityPost, CommunityPostFavorite, GrassConversionReward
+from app.models.customer_service import CustomerServiceConversation, CustomerServiceMessage
 from app.models.group_buy import GroupBuyActivity, GroupBuyGroup, GroupBuyParticipant
 from app.models.order import CartItem, Order, OrderItem, Payment, ProductReview, Refund, RefundLog
 from app.models.product import Category, Merchant, MerchantFollow, Product, ProductFavorite, ProductImage, Sku, SkuStockLog
@@ -15,6 +16,9 @@ __all__ = [
     "CommunityComment",
     "CommunityLike",
     "CommunityPost",
+    "CommunityPostFavorite",
+    "CustomerServiceConversation",
+    "CustomerServiceMessage",
     "GrassConversionReward",
     "GroupBuyActivity",
     "GroupBuyGroup",

@@ -106,6 +106,7 @@ class ProductService:
             name=payload.name,
             description=payload.description,
             cover_url=payload.cover_url or (payload.image_urls[0] if payload.image_urls else None),
+            detail_image_urls=json.dumps(payload.detail_image_urls, ensure_ascii=False),
             status="on_sale",
         )
         product.skus = [
@@ -196,6 +197,8 @@ class ProductService:
             ]
             if "cover_url" not in fields and payload.image_urls:
                 product.cover_url = payload.image_urls[0]
+        if "detail_image_urls" in fields and payload.detail_image_urls is not None:
+            product.detail_image_urls = json.dumps(payload.detail_image_urls, ensure_ascii=False)
 
         await db.commit()
         return await self.get_product_detail(db, product_id, include_off_sale=True)
@@ -640,7 +643,9 @@ class ProductService:
             cover_url=product.cover_url,
             category_id=product.category_id,
             status=product.status,
+            sales_count=product.sales_count,
             images=[image.url for image in sorted(product.images, key=lambda item: item.sort_order)],
+            detail_images=json.loads(product.detail_image_urls or "[]"),
             merchant=product.merchant,
             skus=[
                 SkuResponse(

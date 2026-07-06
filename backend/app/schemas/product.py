@@ -95,6 +95,7 @@ class ProductCreateRequest(BaseModel):
     description: str = ""
     cover_url: str | None = None
     image_urls: list[str] = Field(default_factory=list)
+    detail_image_urls: list[str] = Field(default_factory=list)
     skus: list[SkuCreateRequest]
 
 
@@ -104,6 +105,7 @@ class ProductUpdateRequest(BaseModel):
     description: str | None = None
     cover_url: str | None = None
     image_urls: list[str] | None = None
+    detail_image_urls: list[str] | None = None
 
 
 class ProductListItem(BaseModel):
@@ -131,7 +133,9 @@ class ProductDetailResponse(BaseModel):
     cover_url: str | None = None
     category_id: int | None = None
     status: str
+    sales_count: int = 0
     images: list[str]
+    detail_images: list[str] = Field(default_factory=list)
     merchant: MerchantResponse
     skus: list[SkuResponse]
     review_summary: dict = Field(default_factory=lambda: {"count": 0, "average_score": None})

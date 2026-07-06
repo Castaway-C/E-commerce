@@ -56,6 +56,7 @@ class Product(Base):
     name: Mapped[str] = mapped_column(String(120), index=True)
     description: Mapped[str] = mapped_column(Text, default="")
     cover_url: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    detail_image_urls: Mapped[str] = mapped_column(Text, default="[]")
     status: Mapped[str] = mapped_column(String(30), default="draft", index=True)
     sales_count: Mapped[int] = mapped_column(Integer, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

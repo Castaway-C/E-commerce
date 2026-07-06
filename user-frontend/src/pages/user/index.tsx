@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import {
   Avatar,
   Button,
@@ -38,12 +38,14 @@ import {
   FireOutlined,
   CrownOutlined,
   TagOutlined,
+  MessageOutlined,
   ReloadOutlined,
 } from '@ant-design/icons'
 import dayjs from 'dayjs'
 
 import { addressService, type Address, type AddressPayload } from '../../services/address'
 import { authService, type MemberLevel, type PointsAccount, type PointsLog, type UserProfile } from '../../services/auth'
+import { communityService, type CommunityFavoritePostItem } from '../../services/community'
 import { productService, type MerchantFollowItem, type ProductFavoriteItem } from '../../services/product'
 import { promotionService, type CouponTemplate, type UserCoupon } from '../../services/promotion'
 import { uploadService } from '../../services/upload'
@@ -90,7 +92,7 @@ type AddressFormValues = {
   is_default?: boolean
 }
 
-type SectionTab = 'points' | 'coupons' | 'favorites' | 'follows' | 'addresses'
+type SectionTab = 'points' | 'coupons' | 'favorites' | 'follows' | 'addresses' | 'favoritePosts' | 'customerService'
 
 function buildRegionText(address: Address) {
   return [address.province, address.city, address.district ?? '', address.street ?? '']
@@ -99,6 +101,7 @@ function buildRegionText(address: Address) {
 }
 
 export function UserCenterPage() {
+  const navigate = useNavigate()
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [profileNickname, setProfileNickname] = useState('')
   const [profileGender, setProfileGender] = useState<string>('')
@@ -110,6 +113,8 @@ export function UserCenterPage() {
   const [pointsLogs, setPointsLogs] = useState<PointsLog[]>([])
   const [followedMerchants, setFollowedMerchants] = useState<MerchantFollowItem[]>([])
   const [favoriteProducts, setFavoriteProducts] = useState<ProductFavoriteItem[]>([])
+  const [favoritePosts, setFavoritePosts] = useState<CommunityFavoritePostItem[]>([])
+  const [favoritePostsLoading, setFavoritePostsLoading] = useState(false)
   const [couponTemplates, setCouponTemplates] = useState<CouponTemplate[]>([])
   const [myCoupons, setMyCoupons] = useState<UserCoupon[]>([])
   const [addresses, setAddresses] = useState<Address[]>([])
@@ -155,6 +160,18 @@ export function UserCenterPage() {
     setFavoriteProducts(response.data?.list ?? [])
   }
 
+  async function loadFavoritePosts() {
+    setFavoritePostsLoading(true)
+    try {
+      const response = await communityService.listFavoritePosts({ page_size: 20 })
+      setFavoritePosts(response.data?.list ?? [])
+    } catch {
+      setFavoritePosts([])
+    } finally {
+      setFavoritePostsLoading(false)
+    }
+  }
+
   async function loadCoupons() {
     const [templatesRes, myRes] = await Promise.all([
       promotionService.listCoupons(),
@@ -182,6 +199,7 @@ export function UserCenterPage() {
         loadMemberAndPoints(),
         loadFollowedMerchants(),
         loadFavoriteProducts(),
+        loadFavoritePosts(),
         loadCoupons(),
         loadAddresses(),
       ])
@@ -396,7 +414,9 @@ export function UserCenterPage() {
     { key: 'coupons', label: `优惠券 (${myCoupons.length})`, icon: <TagOutlined /> },
     { key: 'addresses', label: `收货地址 (${addresses.length})`, icon: <EnvironmentOutlined /> },
     { key: 'favorites', label: `商品收藏 (${favoriteProducts.length})`, icon: <HeartOutlined /> },
+    { key: 'favoritePosts', label: `收藏帖子 (${favoritePosts.length})`, icon: <HeartOutlined /> },
     { key: 'follows', label: `关注店铺 (${followedMerchants.length})`, icon: <ShopOutlined /> },
+    { key: 'customerService', label: '客服消息', icon: <MessageOutlined /> },
   ]
 
   return (
@@ -879,6 +899,61 @@ export function UserCenterPage() {
                   ))}
                 </div>
               )}
+            </Card>
+          )}
+
+          {/* Favorite Posts Tab */}
+          {activeTab === 'favoritePosts' && (
+            <Card className="uc-card" title={<span className="uc-card-title">收藏帖子</span>}>
+              <Spin spinning={favoritePostsLoading}>
+                {favoritePosts.length === 0 ? (
+                  <Empty description="暂无收藏帖子" image={Empty.PRESENTED_IMAGE_SIMPLE} style={{ padding: '40px 0' }} />
+                ) : (
+                  <List
+                    dataSource={favoritePosts}
+                    renderItem={(item) => {
+                      const content = item.post.content ?? ''
+                      const summary = content.length > 80 ? `${content.slice(0, 80)}...` : content
+                      return (
+                        <List.Item
+                          key={item.post.id}
+                          className="uc-log-item"
+                          style={{ cursor: 'pointer' }}
+                          onClick={() => navigate('/community')}
+                        >
+                          <div className="uc-log-left">
+                            <Text className="uc-log-desc">{item.post.title}</Text>
+                            <div className="uc-log-meta">
+                              <Tag className="uc-tag-source">{item.post.type}</Tag>
+                              <Text type="secondary" className="uc-log-date">
+                                收藏于 {item.favorited_at?.slice(0, 10) ?? '-'}
+                              </Text>
+                            </div>
+                            <Text type="secondary" className="uc-fav-post-summary">{summary}</Text>
+                          </div>
+                        </List.Item>
+                      )
+                    }}
+                  />
+                )}
+              </Spin>
+            </Card>
+          )}
+
+          {/* Customer Service Tab */}
+          {activeTab === 'customerService' && (
+            <Card className="uc-card" title={<span className="uc-card-title"><MessageOutlined /> 客服消息</span>}>
+              <div className="uc-cs-entry">
+                <Text type="secondary" className="uc-cs-desc">如有订单或商品问题，请联系客服</Text>
+                <Button
+                  type="primary"
+                  icon={<MessageOutlined />}
+                  onClick={() => navigate('/customer-service')}
+                  className="btn-uc-primary"
+                >
+                  联系平台客服
+                </Button>
+              </div>
             </Card>
           )}
           </div>

@@ -10,6 +10,7 @@ import {
   Input,
   List,
   Modal,
+  Popconfirm,
   Select,
   Space,
   Statistic,
@@ -28,6 +29,7 @@ import {
   TeamOutlined,
 } from '@ant-design/icons'
 
+import { authService } from '../../services/auth'
 import {
   communityService,
   type CommunityComment,
@@ -111,6 +113,7 @@ export function CommunityPage() {
   const [showPostForm, setShowPostForm] = useState(false)
   const [loading, setLoading] = useState(false)
   const [likedPosts, setLikedPosts] = useState<Set<number>>(new Set())
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null)
 
   const communityProductIds = useMemo(() => {
     const ids = new Set<number>()
@@ -263,6 +266,40 @@ export function CommunityPage() {
     }
   }
 
+  async function favoritePost(postId: number) {
+    const data = await run<{ favorited: boolean; favorite_count: number }>('收藏', () =>
+      communityService.favoritePost(postId),
+    )
+    if (data) {
+      setPosts((current) =>
+        current.map((post) =>
+          post.id === postId
+            ? { ...post, favorited: data.favorited, favorite_count: data.favorite_count }
+            : post,
+        ),
+      )
+      if (selectedPost && selectedPost.id === postId) {
+        setSelectedPost({
+          ...selectedPost,
+          favorited: data.favorited,
+          favorite_count: data.favorite_count,
+        })
+      }
+    }
+  }
+
+  async function deletePost(postId: number) {
+    try {
+      await communityService.deletePost(postId)
+      message.success('帖子已删除')
+      setSelectedPost(null)
+      await loadPosts()
+      await loadCommunityTopics()
+    } catch (error) {
+      message.error(`删除帖子失败：${getApiErrorMessage(error)}`)
+    }
+  }
+
   async function uploadPostImage(file: File) {
     const data = await run<{ url: string }>('上传帖子图片', () => uploadService.uploadImage(file))
     if (data?.url) setPostImages((items) => [...items, data.url])
@@ -364,6 +401,18 @@ export function CommunityPage() {
     void loadCommunityTopics()
     void searchPostProducts()
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const response = await authService.profile()
+        setCurrentUserId(response.data.id)
+      } catch {
+        // 页面受 RequireAuth 守卫保护，正常情况不会进入此分支；
+        // 若获取失败则不显示删除按钮，不影响其他功能
+      }
+    })()
   }, [])
 
   return (
@@ -512,6 +561,19 @@ export function CommunityPage() {
                         {isLiked ? <HeartFilled /> : <HeartOutlined />}
                         <span>{post.like_count}</span>
                       </button>
+                      <span
+                        className="comm-card-favorite"
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 4,
+                          color: post.favorited ? '#fa541c' : '#8c8c8c',
+                          fontSize: 13,
+                        }}
+                      >
+                        {post.favorited ? <HeartFilled /> : <HeartOutlined />}
+                        <span>{post.favorite_count}</span>
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -593,7 +655,7 @@ export function CommunityPage() {
               </div>
             )}
 
-            {/* Like + Comment counts */}
+            {/* Like + Favorite + Comment counts + Delete */}
             <div className="comm-detail-actions">
               <Button
                 icon={likedPosts.has(selectedPost.id) ? <HeartFilled style={{ color: '#f5222d' }} /> : <HeartOutlined />}
@@ -602,7 +664,26 @@ export function CommunityPage() {
               >
                 {selectedPost.like_count}
               </Button>
+              <Button
+                icon={selectedPost.favorited ? <HeartFilled style={{ color: '#fa541c' }} /> : <HeartOutlined />}
+                onClick={() => void favoritePost(selectedPost.id)}
+                className="comm-detail-like-btn"
+              >
+                {selectedPost.favorite_count}
+              </Button>
               <Text type="secondary"><MessageOutlined /> {selectedPost.comment_count} 条评论</Text>
+              {selectedPost.author.id === currentUserId && (
+                <Popconfirm
+                  title="确认删除"
+                  description="确定要删除这篇帖子吗？删除后不可恢复。"
+                  okText="删除"
+                  cancelText="取消"
+                  okButtonProps={{ danger: true }}
+                  onConfirm={() => void deletePost(selectedPost.id)}
+                >
+                  <Button danger style={{ marginLeft: 'auto' }}>删除帖子</Button>
+                </Popconfirm>
+              )}
             </div>
 
             <Divider />

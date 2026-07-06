@@ -6459,3 +6459,259 @@ pre {
   }
 }
 
+/* =============================================
+   Customer Service Page
+   ============================================= */
+
+.cs-page {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 0 24px 48px;
+  min-height: calc(100vh - 68px);
+}
+
+.cs-header {
+  margin: 24px 0;
+  text-align: center;
+}
+
+.cs-header-title {
+  margin: 0 0 6px !important;
+  font-size: 28px !important;
+  font-weight: 900 !important;
+  color: #0f172a !important;
+}
+
+.cs-header-title .anticon {
+  color: var(--ec-blue);
+}
+
+.cs-header-sub {
+  margin: 0 !important;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.cs-main-layout {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 20px;
+  height: calc(100vh - 220px);
+  min-height: 500px;
+}
+
+/* ── Sidebar: Conversation List ── */
+
+.cs-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: #fff;
+  border-radius: 14px;
+  padding: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  overflow: hidden;
+}
+
+.cs-sidebar-top {
+  flex-shrink: 0;
+}
+
+.cs-conversation-list {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.cs-conversation-item {
+  padding: 12px !important;
+  border-radius: 10px !important;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  border: 1px solid transparent !important;
+}
+
+.cs-conversation-item:hover {
+  background: #f1f5f9;
+}
+
+.cs-conversation-active {
+  background: rgba(53, 152, 255, 0.08) !important;
+  border-color: rgba(53, 152, 255, 0.2) !important;
+}
+
+.cs-conversation-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
+
+.cs-conversation-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.cs-conversation-icon {
+  color: var(--ec-blue);
+}
+
+.cs-conversation-name {
+  font-size: 14px;
+  color: #0f172a;
+}
+
+.cs-conversation-last {
+  font-size: 12px;
+  color: #64748b;
+  max-width: 100%;
+}
+
+.cs-conversation-time {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+/* ── Chat Area ── */
+
+.cs-chat {
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  overflow: hidden;
+}
+
+.cs-chat-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+}
+
+.cs-chat-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  border-bottom: 1px solid #f1f5f9;
+  flex-shrink: 0;
+}
+
+.cs-chat-back {
+  display: none;
+}
+
+.cs-messages-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cs-message-row {
+  display: flex;
+  flex-direction: column;
+}
+
+.cs-message-self {
+  align-items: flex-end;
+}
+
+.cs-message-other {
+  align-items: flex-start;
+}
+
+.cs-message-bubble {
+  max-width: 70%;
+  padding: 10px 14px;
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cs-message-self .cs-message-bubble {
+  background: var(--ec-blue);
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+
+.cs-message-other .cs-message-bubble {
+  background: #f1f5f9;
+  color: #0f172a;
+  border-bottom-left-radius: 4px;
+}
+
+.cs-message-text {
+  font-size: 14px;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.cs-message-self .cs-message-text {
+  color: #fff !important;
+}
+
+.cs-message-time {
+  font-size: 10px;
+  opacity: 0.7;
+}
+
+.cs-message-images {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cs-message-image {
+  max-width: 200px;
+  border-radius: 8px;
+}
+
+.cs-input-area {
+  display: flex;
+  gap: 10px;
+  padding: 12px 18px;
+  border-top: 1px solid #f1f5f9;
+  flex-shrink: 0;
+}
+
+/* ── Customer Service Responsive ── */
+
+@media (max-width: 768px) {
+  .cs-page {
+    padding: 0 16px 32px;
+  }
+
+  .cs-main-layout {
+    grid-template-columns: 1fr;
+    height: calc(100vh - 200px);
+  }
+
+  .cs-sidebar {
+    display: flex;
+  }
+
+  .cs-chat-back {
+    display: inline-flex;
+  }
+
+  .cs-message-bubble {
+    max-width: 85%;
+  }
+}
+
+@media (max-width: 600px) {
+  .cs-header-title {
+    font-size: 22px !important;
+  }
+
+  .cs-input-area {
+    padding: 10px 12px;
+  }
+}
+

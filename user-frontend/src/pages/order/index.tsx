@@ -28,8 +28,11 @@ import {
   CloseCircleOutlined,
   StarOutlined,
   SafetyCertificateOutlined,
+  CustomerServiceOutlined,
 } from '@ant-design/icons'
+import { useNavigate } from 'react-router-dom'
 import { orderService, type Order, type Payment, type Refund } from '../../services/order'
+import { customerService } from '../../services/customerService'
 import { uploadService } from '../../services/upload'
 import { getApiErrorMessage } from '../../services/http'
 import { yuan, statusText, statusColor, randomToken, pickErrorMessage } from '../../utils/format'
@@ -68,6 +71,7 @@ function imageListToFileList(urls: string[]): UploadFile[] {
 }
 
 export function OrderPage() {
+  const navigate = useNavigate()
   const [orders, setOrders] = useState<Order[]>([])
   const [selectedOrderId, setSelectedOrderId] = useState<number | undefined>()
   const [orderStatusFilter, setOrderStatusFilter] = useState<string | undefined>()
@@ -211,6 +215,15 @@ export function OrderPage() {
       }
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function contactCustomerService(order: Order) {
+    try {
+      await customerService.createConversation({ target_type: 'platform', order_id: order.id })
+      navigate('/customer-service')
+    } catch (error) {
+      message.error(`创建客服会话失败：${getApiErrorMessage(error)}`)
     }
   }
 
@@ -415,6 +428,13 @@ export function OrderPage() {
                           取消订单
                         </Button>
                       )}
+                      <Button
+                        size="small"
+                        icon={<CustomerServiceOutlined />}
+                        onClick={() => void contactCustomerService(order)}
+                      >
+                        联系客服
+                      </Button>
                     </div>
                   </div>
                 </div>
