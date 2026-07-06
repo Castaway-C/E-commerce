@@ -70,7 +70,7 @@
 ## 前端约定
 
 - 用户端已从单体测试控制台拆为 11 个独立页面（2026-07-03），不再是联调工作台。
-- 用户端路由：`/` 首页（直接渲染商品列表页）、`/login` 登录、`/register` 注册、`/products`（已重定向至 `/`）、`/products/:productId` 商品详情、`/group-buy` 拼团、`/cart` 购物车、`/checkout` 结算、`/orders` 订单、`/community` 社区、`/promotions` 优惠券（已重定向至 `/user`）、`/addresses` 地址（已重定向至 `/user`）、`/user` 用户中心（左右双栏布局：左栏侧边栏导航含积分与会员、优惠券、收货地址、商品收藏、关注店铺，右栏展示对应内容；移动端侧边栏变为顶部水平 Tab）、`/merchants/:merchantId` 店铺主页。其中购物车、结算、订单、用户中心等需要登录的路由由 `RequireAuth` 守卫保护，未登录自动跳转 `/login`。其中社区页顶部与购物车/订单页统一为居中 page header；帖子详情由 Drawer 改为居中 Modal，并带有由小到大的缩放动画。
+- 用户端路由：`/` 首页（直接渲染商品列表页）、`/login` 登录、`/register` 注册、`/products`（已重定向至 `/`）、`/products/:productId` 商品详情、`/group-buy` 拼团、`/cart` 购物车、`/checkout` 结算、`/orders` 订单、`/community` 社区、`/promotions` 优惠券（已重定向至 `/user`）、`/addresses` 地址（已重定向至 `/user`）、`/user` 用户中心（左右双栏布局：左栏侧边栏导航含积分与会员、优惠券、收货地址、商品收藏、关注店铺，右栏展示对应内容；移动端侧边栏变为顶部水平 Tab）、`/merchants/:merchantId` 店铺主页。除 `/login`、`/register` 外所有路由均由 `RequireAuth` 守卫保护，未登录自动跳转 `/login`；退出登录后也跳转到 `/login`。其中社区页顶部与购物车/订单页统一为居中 page header；帖子详情由 Drawer 改为居中 Modal，并带有由小到大的缩放动画。
 - 顶部导航栏右侧登录态展示「头像 + 昵称」胶囊按钮（点击进入个人中心），无头像时显示昵称首字母；导航链接：首页、拼团专区、购物车、订单、社区。
 - 用户端公共工具函数提取到 `user-frontend/src/utils/format.ts`，所有页面共用，新页面应从 `../../utils` 导入而非重复定义。
 - 原测试控制台代码保留在 `user-frontend/src/pages/test-console/index.tsx` 作为功能完整性参考，不再被路由引用，新功能不要回写到测试控制台。

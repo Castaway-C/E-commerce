@@ -45,7 +45,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   async function logout() {
     await authService.logout()
-    navigate('/')
+    navigate('/login')
   }
 
   return (

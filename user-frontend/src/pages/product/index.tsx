@@ -85,6 +85,10 @@ export function ProductPage() {
   }
 
   async function loadProducts(nextCategoryId = categoryId, nextPage = productPage, nextPageSize = productPageSize) {
+    // 前端校验：最低价大于最高价时不发送请求
+    if (minPriceYuan !== null && maxPriceYuan !== null && minPriceYuan > maxPriceYuan) {
+      return
+    }
     const [sortBy, sortOrder] = productSort.split(':')
     setLoading(true)
     try {
@@ -163,7 +167,7 @@ export function ProductPage() {
             >
               全部
             </Button>
-            {categoryTree.slice(0, 24).map((cat) => (
+            {categoryTree.filter((cat) => cat.name !== '本地服务').slice(0, 24).map((cat) => (
               <Button
                 key={cat.id}
                 shape="round"
@@ -218,6 +222,7 @@ export function ProductPage() {
           </div>
 
           <Button
+            type="primary"
             icon={<ReloadOutlined />}
             onClick={() => {
               setKeyword('')
@@ -273,7 +278,6 @@ export function ProductPage() {
                     >
                       <div className="pec-info">
                         <div className="pec-tags">
-                          <Tag className="pec-tag-id">#{product.id}</Tag>
                           {product.tags.slice(0, 2).map((tag) => (
                             <Tag key={tag} className="pec-tag-label">{tag}</Tag>
                           ))}
@@ -289,9 +293,6 @@ export function ProductPage() {
                           {product.market_price_cent ? (
                             <span className="pec-market-price">¥{yuan(product.market_price_cent)}</span>
                           ) : null}
-                        </div>
-                        <div className="pec-footer">
-                          <span className="pec-action">查看详情 →</span>
                         </div>
                       </div>
                     </Card>
