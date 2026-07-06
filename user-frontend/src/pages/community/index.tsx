@@ -26,6 +26,8 @@ import {
   MessageOutlined,
   PlusOutlined,
   ReloadOutlined,
+  StarOutlined,
+  StarFilled,
   TeamOutlined,
 } from '@ant-design/icons'
 
@@ -551,29 +553,28 @@ export function CommunityPage() {
                         </Avatar>
                         <span className="comm-card-author-name">{post.author.nickname}</span>
                       </div>
-                      <button
-                        className={`comm-like-btn ${isLiked ? 'comm-like-btn-active' : ''}`}
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          void likePost(post.id)
-                        }}
-                      >
-                        {isLiked ? <HeartFilled /> : <HeartOutlined />}
-                        <span>{post.like_count}</span>
-                      </button>
-                      <span
-                        className="comm-card-favorite"
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: 4,
-                          color: post.favorited ? '#fa541c' : '#8c8c8c',
-                          fontSize: 13,
-                        }}
-                      >
-                        {post.favorited ? <HeartFilled /> : <HeartOutlined />}
-                        <span>{post.favorite_count}</span>
-                      </span>
+                      <div className="comm-card-actions">
+                        <button
+                          className={`comm-like-btn ${isLiked ? 'comm-like-btn-active' : ''}`}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            void likePost(post.id)
+                          }}
+                        >
+                          {isLiked ? <HeartFilled /> : <HeartOutlined />}
+                          <span>{post.like_count}</span>
+                        </button>
+                        <button
+                          className={`comm-favorite-btn ${post.favorited ? 'comm-favorite-btn-active' : ''}`}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            void favoritePost(post.id)
+                          }}
+                        >
+                          {post.favorited ? <StarFilled /> : <StarOutlined />}
+                          <span>{post.favorite_count}</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -665,7 +666,7 @@ export function CommunityPage() {
                 {selectedPost.like_count}
               </Button>
               <Button
-                icon={selectedPost.favorited ? <HeartFilled style={{ color: '#fa541c' }} /> : <HeartOutlined />}
+                icon={selectedPost.favorited ? <StarFilled style={{ color: '#f5a623' }} /> : <StarOutlined />}
                 onClick={() => void favoritePost(selectedPost.id)}
                 className="comm-detail-like-btn"
               >

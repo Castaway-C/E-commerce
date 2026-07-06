@@ -5,6 +5,7 @@ import {
   Button,
   Card,
   DatePicker,
+  Divider,
   Empty,
   Form,
   Image,
@@ -27,6 +28,7 @@ import {
   EditOutlined,
   EnvironmentOutlined,
   HeartOutlined,
+  HeartFilled,
   ShopOutlined,
   StarOutlined,
   StarFilled,
@@ -45,7 +47,7 @@ import dayjs from 'dayjs'
 
 import { addressService, type Address, type AddressPayload } from '../../services/address'
 import { authService, type MemberLevel, type PointsAccount, type PointsLog, type UserProfile } from '../../services/auth'
-import { communityService, type CommunityFavoritePostItem } from '../../services/community'
+import { communityService, type CommunityFavoritePostItem, type CommunityPost, type CommunityComment } from '../../services/community'
 import { productService, type MerchantFollowItem, type ProductFavoriteItem } from '../../services/product'
 import { promotionService, type CouponTemplate, type UserCoupon } from '../../services/promotion'
 import { uploadService } from '../../services/upload'
@@ -115,6 +117,9 @@ export function UserCenterPage() {
   const [favoriteProducts, setFavoriteProducts] = useState<ProductFavoriteItem[]>([])
   const [favoritePosts, setFavoritePosts] = useState<CommunityFavoritePostItem[]>([])
   const [favoritePostsLoading, setFavoritePostsLoading] = useState(false)
+  const [selectedPost, setSelectedPost] = useState<CommunityPost | null>(null)
+  const [selectedPostComments, setSelectedPostComments] = useState<CommunityComment[]>([])
+  const [likedPosts, setLikedPosts] = useState<Set<number>>(new Set())
   const [couponTemplates, setCouponTemplates] = useState<CouponTemplate[]>([])
   const [myCoupons, setMyCoupons] = useState<UserCoupon[]>([])
   const [addresses, setAddresses] = useState<Address[]>([])
@@ -169,6 +174,63 @@ export function UserCenterPage() {
       setFavoritePosts([])
     } finally {
       setFavoritePostsLoading(false)
+    }
+  }
+
+  async function openPostDetail(post: CommunityPost) {
+    setSelectedPost(post)
+    try {
+      const response = await communityService.listComments(post.id)
+      setSelectedPostComments(response.data?.list ?? [])
+    } catch {
+      setSelectedPostComments([])
+    }
+  }
+
+  async function likePost(postId: number) {
+    try {
+      const response = await communityService.likePost(postId)
+      if (response.data) {
+        setLikedPosts((prev) => {
+          const next = new Set(prev)
+          if (response.data.liked) {
+            next.add(postId)
+          } else {
+            next.delete(postId)
+          }
+          return next
+        })
+        setSelectedPost((prev) => prev && prev.id === postId ? { ...prev, like_count: response.data.like_count } : prev)
+        setFavoritePosts((prev) => prev.map((item) => item.post.id === postId ? { ...item, post: { ...item.post, like_count: response.data.like_count } } : item))
+      }
+    } catch (error) {
+      message.error(`点赞失败：${getApiErrorMessage(error)}`)
+    }
+  }
+
+  async function favoritePost(postId: number) {
+    try {
+      const response = await communityService.favoritePost(postId)
+      if (response.data) {
+        setSelectedPost((prev) => prev && prev.id === postId ? { ...prev, favorited: response.data.favorited, favorite_count: response.data.favorite_count } : prev)
+        setFavoritePosts((prev) => prev.filter((item) => item.post.id !== postId))
+        if (!response.data.favorited) {
+          message.success('已取消收藏')
+        }
+      }
+    } catch (error) {
+      message.error(`收藏失败：${getApiErrorMessage(error)}`)
+    }
+  }
+
+  async function deletePost(postId: number) {
+    try {
+      await communityService.deletePost(postId)
+      setSelectedPost(null)
+      setFavoritePosts((prev) => prev.filter((item) => item.post.id !== postId))
+      message.success('帖子已删除')
+    } catch (error) {
+      message.error(`删除失败：${getApiErrorMessage(error)}`)
     }
   }
 
@@ -414,7 +476,7 @@ export function UserCenterPage() {
     { key: 'coupons', label: `优惠券 (${myCoupons.length})`, icon: <TagOutlined /> },
     { key: 'addresses', label: `收货地址 (${addresses.length})`, icon: <EnvironmentOutlined /> },
     { key: 'favorites', label: `商品收藏 (${favoriteProducts.length})`, icon: <HeartOutlined /> },
-    { key: 'favoritePosts', label: `收藏帖子 (${favoritePosts.length})`, icon: <HeartOutlined /> },
+    { key: 'favoritePosts', label: `收藏帖子 (${favoritePosts.length})`, icon: <StarOutlined /> },
     { key: 'follows', label: `关注店铺 (${followedMerchants.length})`, icon: <ShopOutlined /> },
     { key: 'customerService', label: '客服消息', icon: <MessageOutlined /> },
   ]
@@ -919,7 +981,7 @@ export function UserCenterPage() {
                           key={item.post.id}
                           className="uc-log-item"
                           style={{ cursor: 'pointer' }}
-                          onClick={() => navigate('/community')}
+                          onClick={() => void openPostDetail(item.post)}
                         >
                           <div className="uc-log-left">
                             <Text className="uc-log-desc">{item.post.title}</Text>
@@ -930,6 +992,11 @@ export function UserCenterPage() {
                               </Text>
                             </div>
                             <Text type="secondary" className="uc-fav-post-summary">{summary}</Text>
+                          </div>
+                          <div className="uc-fav-post-stats">
+                            <span><HeartOutlined /> {item.post.like_count}</span>
+                            <span><StarOutlined /> {item.post.favorite_count}</span>
+                            <span><MessageOutlined /> {item.post.comment_count}</span>
                           </div>
                         </List.Item>
                       )
@@ -1096,6 +1163,116 @@ export function UserCenterPage() {
             <Switch checkedChildren="设为默认地址" unCheckedChildren="非默认" />
           </Form.Item>
         </Form>
+      </Modal>
+
+      <Modal
+        open={!!selectedPost}
+        title={selectedPost?.title}
+        onCancel={() => setSelectedPost(null)}
+        footer={null}
+        width={720}
+        centered
+        className="comm-post-modal"
+      >
+        {selectedPost ? (
+          <div className="comm-detail">
+            <div className="comm-detail-header">
+              <Avatar size={40} src={absoluteAssetUrl(selectedPost.author.avatar_url)}>
+                {selectedPost.author.nickname?.[0] ?? '用'}
+              </Avatar>
+              <div className="comm-detail-author-info">
+                <Text strong>{selectedPost.author.nickname}</Text>
+                <Text type="secondary" className="comm-detail-date">
+                  {new Date(selectedPost.created_at).toLocaleString()}
+                </Text>
+              </div>
+              <div className="comm-detail-tags">
+                <Tag>{selectedPost.section}</Tag>
+                <Tag>{selectedPost.type}</Tag>
+              </div>
+            </div>
+
+            <Paragraph className="comm-detail-content">{selectedPost.content}</Paragraph>
+
+            {selectedPost.topic_tags.length > 0 && (
+              <div className="comm-detail-topics">
+                {selectedPost.topic_tags.map((tag) => (
+                  <Tag key={tag} className="clickable-tag">
+                    #{tag}
+                  </Tag>
+                ))}
+              </div>
+            )}
+
+            {selectedPost.image_urls.length > 0 && (
+              <Image.PreviewGroup>
+                <div className="comm-detail-images">
+                  {selectedPost.image_urls.map((url) => (
+                    <Image key={url} width="100%" src={absoluteAssetUrl(url)} className="comm-detail-image" />
+                  ))}
+                </div>
+              </Image.PreviewGroup>
+            )}
+
+            <div className="comm-detail-actions">
+              <Button
+                icon={likedPosts.has(selectedPost.id) ? <HeartFilled style={{ color: '#f5222d' }} /> : <HeartOutlined />}
+                onClick={() => void likePost(selectedPost.id)}
+                className="comm-detail-like-btn"
+              >
+                {selectedPost.like_count}
+              </Button>
+              <Button
+                icon={selectedPost.favorited ? <StarFilled style={{ color: '#f5a623' }} /> : <StarOutlined />}
+                onClick={() => void favoritePost(selectedPost.id)}
+                className="comm-detail-like-btn"
+              >
+                {selectedPost.favorite_count}
+              </Button>
+              <Text type="secondary"><MessageOutlined /> {selectedPost.comment_count} 条评论</Text>
+              {profile?.id === selectedPost.author.id && (
+                <Popconfirm
+                  title="确认删除"
+                  description="确定要删除这篇帖子吗？删除后不可恢复。"
+                  okText="删除"
+                  cancelText="取消"
+                  okButtonProps={{ danger: true }}
+                  onConfirm={() => void deletePost(selectedPost.id)}
+                >
+                  <Button danger style={{ marginLeft: 'auto' }}>删除帖子</Button>
+                </Popconfirm>
+              )}
+            </div>
+
+            <Divider />
+
+            <div className="comm-detail-comments">
+              <Text strong className="comm-detail-section-title">评论</Text>
+              <List
+                dataSource={selectedPostComments}
+                locale={{ emptyText: '暂无评论，快来抢沙发' }}
+                renderItem={(comment) => (
+                  <List.Item className="comm-comment-item">
+                    <div className="comm-comment">
+                      <Avatar size={28} src={absoluteAssetUrl(comment.author.avatar_url)}>
+                        {comment.author.nickname?.[0] ?? '用'}
+                      </Avatar>
+                      <div className="comm-comment-body">
+                        <Text strong className="comm-comment-author">
+                          {comment.author.nickname || '匿名'}
+                        </Text>
+                        <Text className="comm-comment-text">{comment.content}</Text>
+                        <Text type="secondary" className="comm-comment-date">
+                          {new Date(comment.created_at).toLocaleString()}
+                        </Text>
+                      </div>
+                    </div>
+                  </List.Item>
+                )}
+              />
+            </div>
+          </div>
+        ) : null}
       </Modal>
     </div>
   )
