@@ -19,11 +19,13 @@ import {
   HeartOutlined,
   ShoppingCartOutlined,
   ArrowLeftOutlined,
+  FireOutlined,
 } from '@ant-design/icons'
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { authService } from '../../services/auth'
 import { getApiErrorMessage } from '../../services/http'
+import { groupBuyService, type GroupBuyActivity } from '../../services/groupBuy'
 import { orderService } from '../../services/order'
 import {
   productService,
@@ -45,8 +47,10 @@ type PageData<T> = {
 export function ProductDetailPage() {
   const params = useParams<{ productId: string }>()
   const [searchParams] = useSearchParams()
+  const navigate = useNavigate()
   const productId = params.productId ? Number(params.productId) : NaN
   const sourcePostId = searchParams.get('source_post_id') ? Number(searchParams.get('source_post_id')) : undefined
+  const groupBuyActivityId = searchParams.get('group_buy_activity_id') ? Number(searchParams.get('group_buy_activity_id')) : undefined
 
   const [product, setProduct] = useState<ProductDetail | null>(null)
   const [reviews, setReviews] = useState<ProductReview[]>([])
@@ -57,6 +61,7 @@ export function ProductDetailPage() {
   const [favoriteStatus, setFavoriteStatus] = useState<ProductFavoriteStatus | null>(null)
   const [loading, setLoading] = useState(false)
   const [activeImageIndex, setActiveImageIndex] = useState(0)
+  const [groupBuyActivity, setGroupBuyActivity] = useState<GroupBuyActivity | null>(null)
 
   const selectedSku = useMemo(() => {
     return product?.skus.find((sku) => sku.id === selectedSkuId) ?? product?.skus[0]
@@ -96,6 +101,18 @@ export function ProductDetailPage() {
       }
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function loadGroupBuyActivity() {
+    if (!groupBuyActivityId) return
+    try {
+      const response = await groupBuyService.listActivities()
+      const activity = response.data?.find((a) => a.id === groupBuyActivityId)
+      setGroupBuyActivity(activity ?? null)
+    } catch (error) {
+      message.error(`拼团活动信息加载失败：${getApiErrorMessage(error)}`)
+      setGroupBuyActivity(null)
     }
   }
 
@@ -156,6 +173,11 @@ export function ProductDetailPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [productId])
+
+  useEffect(() => {
+    void loadGroupBuyActivity()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groupBuyActivityId])
 
   useEffect(() => {
     if (product) {
@@ -235,13 +257,25 @@ export function ProductDetailPage() {
 
                 {/* Price Block */}
                 <div className="detail-price-block">
-                  <div className="detail-price-row">
-                    <span className="detail-price-label">价格</span>
-                    <span className="detail-price">¥{yuan(selectedSku?.price_cent)}</span>
-                    {selectedSku?.market_price_cent ? (
-                      <span className="detail-market-price">¥{yuan(selectedSku.market_price_cent)}</span>
-                    ) : null}
-                  </div>
+                  {groupBuyActivity ? (
+                    <div className="detail-price-row">
+                      <span className="detail-price-label">拼团价</span>
+                      <Tag color="red" className="detail-tag-group-buy">拼团</Tag>
+                      <span className="detail-price detail-price-group">¥{yuan(groupBuyActivity.group_price_cent)}</span>
+                      <span className="detail-market-price">¥{yuan(selectedSku?.price_cent ?? 0)}</span>
+                      <span className="detail-price-savings">
+                        省 ¥{yuan((selectedSku?.price_cent ?? 0) - groupBuyActivity.group_price_cent)}
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="detail-price-row">
+                      <span className="detail-price-label">价格</span>
+                      <span className="detail-price">¥{yuan(selectedSku?.price_cent)}</span>
+                      {selectedSku?.market_price_cent ? (
+                        <span className="detail-market-price">¥{yuan(selectedSku.market_price_cent)}</span>
+                      ) : null}
+                    </div>
+                  )}
                   <div className="detail-review-brief">
                     <Rate disabled value={product.review_summary.average_score ?? 0} allowHalf className="detail-rate-sm" />
                     <span className="detail-review-score">{product.review_summary.average_score ?? '-'}</span>
@@ -291,16 +325,29 @@ export function ProductDetailPage() {
 
                 {/* Action Buttons */}
                 <div className="detail-actions">
-                  <Button
-                    type="primary"
-                    size="large"
-                    icon={<ShoppingCartOutlined />}
-                    onClick={addCart}
-                    disabled={!selectedSku || selectedSku.stock <= 0}
-                    className="btn-add-cart"
-                  >
-                    加入购物车
-                  </Button>
+                  {groupBuyActivity ? (
+                    <Button
+                      type="primary"
+                      size="large"
+                      icon={<FireOutlined />}
+                      onClick={() => navigate(`/checkout?group_buy=${groupBuyActivity.id}`)}
+                      disabled={!selectedSku || selectedSku.stock <= 0}
+                      className="btn-add-cart"
+                    >
+                      发起拼团
+                    </Button>
+                  ) : (
+                    <Button
+                      type="primary"
+                      size="large"
+                      icon={<ShoppingCartOutlined />}
+                      onClick={addCart}
+                      disabled={!selectedSku || selectedSku.stock <= 0}
+                      className="btn-add-cart"
+                    >
+                      加入购物车
+                    </Button>
+                  )}
                   <Button
                     size="large"
                     onClick={toggleFavorite}

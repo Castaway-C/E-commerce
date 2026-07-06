@@ -18,7 +18,7 @@ import { getApiErrorMessage } from '../../services/http'
 import { groupBuyService, type GroupBuyActivity } from '../../services/groupBuy'
 import { absoluteAssetUrl, statusColor, statusText, yuan } from '../../utils/format'
 
-const { Text } = Typography
+const { Text, Title, Paragraph } = Typography
 
 export function GroupBuyPage() {
   const navigate = useNavigate()
@@ -47,15 +47,15 @@ export function GroupBuyPage() {
     <div className="gb-page">
       {contextHolder}
       <Spin spinning={loading}>
-        {/* ── Hero Banner ── */}
-        <div className="gb-hero">
-          <div className="gb-hero-bg" />
-          <div className="gb-hero-inner">
-            <div className="gb-hero-badge"><FireOutlined /> 拼团专区</div>
-            <h1 className="gb-hero-title">拼着买，更划算</h1>
-            <p className="gb-hero-subtitle">邀请好友一起拼，专享超低拼团价</p>
-          </div>
-        </div>
+        {/* ── Page Header ── */}
+        <header className="gb-header">
+          <Title level={3} className="gb-header-title">
+            <FireOutlined /> 拼团专区
+          </Title>
+          <Paragraph className="gb-header-sub">
+            邀请好友一起拼，专享超低拼团价
+          </Paragraph>
+        </header>
 
         {/* ── Notice ── */}
         <div className="gb-notice">
@@ -76,7 +76,11 @@ export function GroupBuyPage() {
             ) : (
               <div className="gb-activity-grid">
                 {activities.map((activity) => (
-                  <div key={activity.id} className="gb-activity-card">
+                  <div
+                    key={activity.id}
+                    className="gb-activity-card"
+                    onClick={() => navigate(`/products/${activity.product_id}?group_buy_activity_id=${activity.id}`)}
+                  >
                     {/* Card Header: Product Image + Info */}
                     <div className="gb-ac-top">
                       <div className="gb-ac-image">
@@ -126,7 +130,10 @@ export function GroupBuyPage() {
                       type="primary"
                       block
                       className="btn-gb-start"
-                      onClick={() => navigate(`/checkout?group_buy=${activity.id}`)}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        navigate(`/checkout?group_buy=${activity.id}`)
+                      }}
                     >
                       <FireOutlined /> 发起拼团
                     </Button>
@@ -168,7 +175,10 @@ export function GroupBuyPage() {
                                     type="primary"
                                     className="btn-gb-join"
                                     disabled={group.joined_count >= group.group_size}
-                                    onClick={() => navigate(`/checkout?group_join=${group.id}`)}
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      navigate(`/checkout?group_join=${group.id}`)
+                                    }}
                                   >
                                     加入此团
                                   </Button>

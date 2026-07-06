@@ -307,10 +307,14 @@ export function OrderPage() {
     <div className="order-page">
       <Spin spinning={loading}>
         {/* ── Page Header ── */}
-        <div className="order-header">
-          <h1 className="order-header-title">我的订单</h1>
-          <p className="order-header-sub">查看订单、完成支付、确认收货、评价商品和发起售后</p>
-        </div>
+        <header className="order-header">
+          <Title level={3} className="order-header-title">
+            我的订单
+          </Title>
+          <Paragraph className="order-header-sub">
+            查看订单、完成支付、确认收货、评价商品和发起售后
+          </Paragraph>
+        </header>
 
         {/* ── Status Tabs ── */}
         <div className="order-tabs">
