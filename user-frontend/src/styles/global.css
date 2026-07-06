@@ -4528,6 +4528,35 @@ pre {
   gap: 4px;
 }
 
+.uc-fab-cs {
+  position: fixed;
+  right: 32px;
+  bottom: 48px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--ec-blue);
+  border: none;
+  color: #fff;
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(53, 152, 255, 0.4);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  z-index: 1000;
+}
+
+.uc-fab-cs:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(53, 152, 255, 0.5);
+}
+
+.uc-fab-cs .anticon {
+  font-size: 24px;
+}
+
 .uc-log-right {
   display: flex;
   flex-direction: column;

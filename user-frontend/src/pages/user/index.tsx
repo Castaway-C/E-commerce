@@ -52,7 +52,7 @@ import { productService, type MerchantFollowItem, type ProductFavoriteItem } fro
 import { promotionService, type CouponTemplate, type UserCoupon } from '../../services/promotion'
 import { uploadService } from '../../services/upload'
 import { getApiErrorMessage } from '../../services/http'
-import { absoluteAssetUrl, pickErrorMessage, yuan } from '../../utils/format'
+import { absoluteAssetUrl, pickErrorMessage, statusText, yuan } from '../../utils/format'
 import { REGION_DATA } from '../../utils/region-data'
 
 const { Text, Paragraph } = Typography
@@ -94,7 +94,7 @@ type AddressFormValues = {
   is_default?: boolean
 }
 
-type SectionTab = 'points' | 'coupons' | 'favorites' | 'follows' | 'addresses' | 'favoritePosts' | 'customerService'
+type SectionTab = 'points' | 'coupons' | 'favorites' | 'follows' | 'addresses' | 'favoritePosts'
 
 function buildRegionText(address: Address) {
   return [address.province, address.city, address.district ?? '', address.street ?? '']
@@ -478,7 +478,6 @@ export function UserCenterPage() {
     { key: 'favorites', label: `商品收藏 (${favoriteProducts.length})`, icon: <HeartOutlined /> },
     { key: 'favoritePosts', label: `收藏帖子 (${favoritePosts.length})`, icon: <StarOutlined /> },
     { key: 'follows', label: `关注店铺 (${followedMerchants.length})`, icon: <ShopOutlined /> },
-    { key: 'customerService', label: '客服消息', icon: <MessageOutlined /> },
   ]
 
   return (
@@ -986,7 +985,7 @@ export function UserCenterPage() {
                           <div className="uc-log-left">
                             <Text className="uc-log-desc">{item.post.title}</Text>
                             <div className="uc-log-meta">
-                              <Tag className="uc-tag-source">{item.post.type}</Tag>
+                              <Tag className="uc-tag-source">{statusText(item.post.type)}</Tag>
                               <Text type="secondary" className="uc-log-date">
                                 收藏于 {item.favorited_at?.slice(0, 10) ?? '-'}
                               </Text>
@@ -1006,26 +1005,17 @@ export function UserCenterPage() {
               </Spin>
             </Card>
           )}
-
-          {/* Customer Service Tab */}
-          {activeTab === 'customerService' && (
-            <Card className="uc-card" title={<span className="uc-card-title"><MessageOutlined /> 客服消息</span>}>
-              <div className="uc-cs-entry">
-                <Text type="secondary" className="uc-cs-desc">如有订单或商品问题，请联系客服</Text>
-                <Button
-                  type="primary"
-                  icon={<MessageOutlined />}
-                  onClick={() => navigate('/customer-service')}
-                  className="btn-uc-primary"
-                >
-                  联系平台客服
-                </Button>
-              </div>
-            </Card>
-          )}
           </div>
         </div>
       </Spin>
+
+      <button
+        className="uc-fab-cs"
+        onClick={() => navigate('/customer-service')}
+        title="联系客服"
+      >
+        <MessageOutlined />
+      </button>
 
       {/* ── Edit Profile Modal ── */}
       <Modal
@@ -1187,8 +1177,7 @@ export function UserCenterPage() {
                 </Text>
               </div>
               <div className="comm-detail-tags">
-                <Tag>{selectedPost.section}</Tag>
-                <Tag>{selectedPost.type}</Tag>
+                <Tag>{statusText(selectedPost.type)}</Tag>
               </div>
             </div>
 
