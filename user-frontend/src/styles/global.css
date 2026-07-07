@@ -6258,6 +6258,25 @@ pre {
   color: var(--muted-soft) !important;
 }
 
+.cs-conversation-actions {
+  flex-shrink: 0;
+}
+
+.cs-conversation-delete {
+  color: var(--muted) !important;
+  opacity: 0;
+  transition: opacity 0.15s ease, color 0.15s ease !important;
+}
+
+.cs-conversation-list .ant-list-item:hover .cs-conversation-delete,
+.cs-conversation-active .cs-conversation-delete {
+  opacity: 1;
+}
+
+.cs-conversation-delete:hover {
+  color: #ff4d4f !important;
+}
+
 .cs-chat {
   display: flex;
   flex-direction: column;

@@ -167,6 +167,22 @@ class CustomerServiceService:
         await websocket_manager.broadcast(self._channel(conversation.id), {"type": "chat.message", "data": response.model_dump(mode="json")})
         return response
 
+    async def delete_user_conversation(self, db: AsyncSession, user: User, conversation_id: int) -> None:
+        """用户删除自己的客服会话（物理删除会话及其所有消息）。"""
+        conversation = await self._get_authorized_conversation(db, conversation_id, user=user)
+        # 先删除会话下的所有消息，再删除会话本身
+        result = await db.execute(
+            select(CustomerServiceMessage).where(CustomerServiceMessage.conversation_id == conversation.id)
+        )
+        for message in result.scalars():
+            await db.delete(message)
+        await db.delete(conversation)
+        await db.commit()
+        await websocket_manager.broadcast(
+            self._channel(conversation.id),
+            {"type": "conversation.deleted", "conversation_id": conversation.id},
+        )
+
     async def close_conversation(self, db: AsyncSession, admin: AdminUser, conversation_id: int) -> CustomerServiceConversationResponse:
         conversation = await self._get_authorized_conversation(db, conversation_id, admin=admin)
         conversation.status = "closed"

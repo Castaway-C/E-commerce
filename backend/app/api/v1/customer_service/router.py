@@ -64,3 +64,13 @@ async def send_message(
 ) -> ApiResponse[dict]:
     message = await customer_service.send_user_message(db, current_user, conversation_id, payload)
     return success(message.model_dump())
+
+
+@router.delete("/conversations/{conversation_id}", response_model=ApiResponse[dict])
+async def delete_conversation(
+    conversation_id: int,
+    db: DbSession,
+    current_user: User = Depends(get_current_user),
+) -> ApiResponse[dict]:
+    await customer_service.delete_user_conversation(db, current_user, conversation_id)
+    return success({"id": conversation_id})
