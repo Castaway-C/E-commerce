@@ -1311,6 +1311,7 @@ class OrderService:
             price_cent=sku.price_cent,
             quantity=quantity,
             checked=checked,
+            cover_url=sku.product.cover_url,
             source_post_id=source_post_id,
             source_label="种草来源" if source_post_id is not None else None,
             invalid_reason=invalid_reason,
