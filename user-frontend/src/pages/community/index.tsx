@@ -652,7 +652,11 @@ export function CommunityPage() {
             {selectedPost.product_ids.length > 0 && (
               <div className="comm-detail-products">
                 <Text strong className="comm-detail-section-title">关联商品</Text>
-                {renderCommunityProductCards(selectedPost.product_ids, false, selectedPost.id)}
+                {renderCommunityProductCards(
+                  selectedPost.product_ids,
+                  false,
+                  selectedPost.type === 'grass' ? selectedPost.id : undefined,
+                )}
               </div>
             )}
 

@@ -368,14 +368,14 @@ html {
 .auth-brand-bg {
   position: absolute;
   inset: 0;
-  background: url('/src/styles/bg3.webp') center/cover no-repeat;
+  background: url('/src/styles/bg.png') center/cover no-repeat;
 }
 
 .auth-brand-overlay {
   position: absolute;
   inset: 0;
   background: var(--surface-dark);
-  opacity: 0.92;
+  opacity: 0.5;
 }
 
 .auth-brand-content {
@@ -5679,6 +5679,11 @@ pre {
   display: flex;
   flex-direction: column;
   gap: var(--s-xs);
+  cursor: pointer;
+}
+
+.cart-item-info:hover .cart-item-name {
+  color: var(--primary);
 }
 
 .cart-item-name {

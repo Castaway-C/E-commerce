@@ -182,7 +182,7 @@ export function CartPage() {
                     className="cart-item-image"
                   />
                 </div>
-                <div className="cart-item-info">
+                <div className="cart-item-info" onClick={() => navigate(`/products/${item.product_id}`)}>
                   <div className="cart-item-name">{item.product_name}</div>
                   <div className="cart-item-meta">
                     <Tag>{item.sku_name}</Tag>
