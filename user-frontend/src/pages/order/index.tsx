@@ -368,11 +368,10 @@ export function OrderPage() {
                   {/* Card Header */}
                   <div className="oc-header">
                     <div className="oc-header-left">
-                      <Tag className="oc-tag-id">订单 #{order.id}</Tag>
                       <Text type="secondary" className="oc-order-no">{order.order_no}</Text>
                       {order.order_type === 'grass' ? <Tag color="purple" className="oc-tag-type">{statusText(order.order_type)}</Tag> : order.order_type === 'group_buy' ? <Tag className="oc-tag-type">{statusText(order.order_type)}</Tag> : null}
                       {order.source_post_id && (
-                        <Tag color="purple">种草来源 #{order.source_post_id}</Tag>
+                        <Tag color="purple">种草来源</Tag>
                       )}
                     </div>
                     <div className="oc-header-right">
@@ -709,9 +708,8 @@ export function OrderPage() {
               {refunds.map((refund) => (
                 <div key={refund.id} className="or-item">
                   <div className="or-item-left">
-                    <Tag className="or-tag-id">售后 #{refund.id}</Tag>
                     <Badge color={statusColor(refund.status)} text={statusText(refund.status)} />
-                    <Text type="secondary">订单 #{refund.order_id}</Text>
+                    <Text type="secondary">订单号 {refund.order_id}</Text>
                   </div>
                   <div className="or-item-right">
                     <Text className="or-refund-amount">¥{yuan(refund.refund_amount_cent)}</Text>
@@ -736,7 +734,7 @@ export function OrderPage() {
             <Space direction="vertical" size={16} style={{ width: '100%' }}>
               <Descriptions column={1} size="small" bordered>
                 <Descriptions.Item label="售后单号">{selectedRefundDetail.id}</Descriptions.Item>
-                <Descriptions.Item label="订单号">#{selectedRefundDetail.order_id}</Descriptions.Item>
+                <Descriptions.Item label="订单号">{selectedRefundDetail.order_id}</Descriptions.Item>
                 <Descriptions.Item label="状态">
                   <Badge
                     color={statusColor(selectedRefundDetail.status)}

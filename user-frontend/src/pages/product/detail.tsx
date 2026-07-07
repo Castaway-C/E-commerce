@@ -21,10 +21,12 @@ import {
   ArrowLeftOutlined,
   FireOutlined,
   ShopOutlined,
+  CustomerServiceOutlined,
 } from '@ant-design/icons'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { authService } from '../../services/auth'
+import { customerService } from '../../services/customerService'
 import { getApiErrorMessage } from '../../services/http'
 import { groupBuyService, type GroupBuyActivity } from '../../services/groupBuy'
 import { orderService } from '../../services/order'
@@ -129,6 +131,24 @@ export function ProductDetailPage() {
     } catch (error) {
       message.error(`商品评价加载失败：${getApiErrorMessage(error)}`)
       setReviews([])
+    }
+  }
+
+  async function contactMerchant() {
+    if (!product) return
+    if (!authService.hasToken()) {
+      message.warning('请先登录用户账号')
+      return
+    }
+    try {
+      await customerService.createConversation({
+        target_type: 'merchant',
+        merchant_id: product.merchant.id,
+        product_id: product.id,
+      })
+      navigate('/customer-service')
+    } catch (error) {
+      message.error(`创建客服会话失败：${getApiErrorMessage(error)}`)
     }
   }
 
@@ -246,7 +266,6 @@ export function ProductDetailPage() {
                 <div className="detail-title-row">
                   <h1 className="detail-title">{product.name}</h1>
                   <div className="detail-tags">
-                    <Tag className="detail-tag-id">#{product.id}</Tag>
                     {product.category_name ? (
                       <Tag className="detail-tag-cat">{product.category_name}</Tag>
                     ) : null}
@@ -267,7 +286,7 @@ export function ProductDetailPage() {
                   {groupBuyActivity ? (
                     <div className="detail-price-row">
                       <span className="detail-price-label">拼团价</span>
-                      <Tag color="red" className="detail-tag-group-buy">拼团</Tag>
+                      <FireOutlined className="detail-tag-group-buy" style={{ color: '#ff4d4f', fontSize: 18 }} />
                       <span className="detail-price detail-price-group">¥{yuan(groupBuyActivity.group_price_cent)}</span>
                       <span className="detail-market-price">¥{yuan(selectedSku?.price_cent ?? 0)}</span>
                       <span className="detail-price-savings">
@@ -314,7 +333,7 @@ export function ProductDetailPage() {
                   </div>
                   {selectedSku && (
                     <Text type="secondary" className="detail-sku-stock">
-                      SKU #{selectedSku.id} · 库存 {selectedSku.stock} 件
+                      {selectedSku.name} · 库存 {selectedSku.stock} 件
                     </Text>
                   )}
                 </div>
@@ -363,6 +382,14 @@ export function ProductDetailPage() {
                     className="btn-toggle-fav"
                   >
                     {favoriteStatus?.favorited ? '已收藏' : '收藏'}
+                  </Button>
+                  <Button
+                    size="large"
+                    icon={<CustomerServiceOutlined />}
+                    onClick={contactMerchant}
+                    className="btn-contact-merchant"
+                  >
+                    联系商家
                   </Button>
                 </div>
               </div>

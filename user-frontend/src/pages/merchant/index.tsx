@@ -1,6 +1,6 @@
 import { Button, Empty, InputNumber, Select, Skeleton, Tag, Typography, message } from 'antd'
 import { useEffect, useState } from 'react'
-import { Link, useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import {
   ShopOutlined,
   HeartOutlined,
@@ -8,7 +8,6 @@ import {
   GiftOutlined,
   ReloadOutlined,
   EnvironmentOutlined,
-  MessageOutlined,
 } from '@ant-design/icons'
 
 import {
@@ -18,8 +17,6 @@ import {
   type ProductListItem,
 } from '../../services/product'
 import { promotionService, type CouponTemplate } from '../../services/promotion'
-import { customerService } from '../../services/customerService'
-import { authService } from '../../services/auth'
 import { absoluteAssetUrl, pickErrorMessage, yuan } from '../../utils/format'
 
 const { Text, Paragraph, Title } = Typography
@@ -90,22 +87,6 @@ export function MerchantPage() {
     }
   }
 
-  async function contactMerchant() {
-    if (!authService.hasToken()) {
-      message.warning('请先登录用户账号')
-      return
-    }
-    try {
-      await customerService.createConversation({
-        target_type: 'merchant',
-        merchant_id: numericMerchantId,
-      })
-      navigate('/customer-service')
-    } catch (error) {
-      message.error(pickErrorMessage(error) ?? '创建客服会话失败')
-    }
-  }
-
   function buildProductParams() {
     const [sortBy, sortOrder] = sort.split(':')
     return {
@@ -160,7 +141,6 @@ export function MerchantPage() {
               <div className="shop-hero-info">
                 <h1 className="shop-name">{merchant?.name ?? `店铺 #${numericMerchantId}`}</h1>
                 <div className="shop-hero-meta">
-                  <Tag className="shop-tag-id">店铺 #{numericMerchantId}</Tag>
                   <Tag className="shop-tag-stat">在售 {total}</Tag>
                   <Tag className="shop-tag-follow">
                     <HeartOutlined /> {followStatus?.follower_count ?? 0}
@@ -181,16 +161,6 @@ export function MerchantPage() {
               >
                 {followStatus?.followed ? '已关注' : '关注店铺'}
               </Button>
-              <Button
-                icon={<MessageOutlined />}
-                onClick={() => void contactMerchant()}
-                className="shop-btn-contact"
-              >
-                联系商家
-              </Button>
-              <Link to="/">
-                <Button className="shop-btn-back">返回首页</Button>
-              </Link>
             </div>
           </Skeleton>
         </div>
@@ -304,9 +274,6 @@ export function MerchantPage() {
                   </div>
                   <div className="shop-product-body">
                     <Text className="shop-product-name" ellipsis>{product.name}</Text>
-                    <div className="shop-product-meta">
-                      <Tag className="shop-product-tag-id">#{product.id}</Tag>
-                    </div>
                     <div className="shop-product-price-row">
                       <span className="shop-product-price">¥{yuan(product.price_cent)}</span>
                       {product.market_price_cent ? (

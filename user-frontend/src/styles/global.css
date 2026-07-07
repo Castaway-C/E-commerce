@@ -2255,18 +2255,15 @@ pre {
 }
 
 .btn-contact-merchant {
-  height: 36px !important;
+  height: 44px !important;
   border-radius: var(--r-md) !important;
-  background: var(--surface-card) !important;
-  border: 1px solid var(--hairline) !important;
+  border-color: var(--hairline) !important;
+  background: var(--canvas) !important;
   color: var(--ink) !important;
-  font-size: 13px !important;
   font-weight: 500 !important;
-  transition: all 0.15s ease !important;
 }
 
 .btn-contact-merchant:hover {
-  background: var(--surface-cream-strong) !important;
   border-color: var(--primary) !important;
   color: var(--primary) !important;
 }
@@ -4004,6 +4001,19 @@ pre {
   align-items: center;
   gap: var(--s-sm);
   margin-bottom: var(--s-xs);
+}
+
+.uc-gender-icon {
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.uc-gender-male {
+  color: #3598ff;
+}
+
+.uc-gender-female {
+  color: #f5222d;
 }
 
 .uc-hero-name {
