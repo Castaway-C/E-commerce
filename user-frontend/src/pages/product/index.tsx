@@ -218,6 +218,7 @@ export function ProductPage() {
                 { value: 'newest:desc', label: '最新上架' },
                 { value: 'price:asc', label: '价格升序' },
                 { value: 'price:desc', label: '价格降序' },
+                { value: 'sales:desc', label: '销量优先' },
               ]}
             />
           </div>

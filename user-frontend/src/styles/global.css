@@ -2650,6 +2650,12 @@ pre {
   gap: var(--s-sm);
 }
 
+.od-action-buttons {
+  display: flex;
+  gap: var(--s-sm);
+  padding: var(--s-sm) 0;
+}
+
 .od-form {
   display: flex;
   flex-direction: column;
@@ -5334,203 +5340,7 @@ pre {
   text-decoration: line-through;
 }
 
-/* ── Product Detail Drawer ── */
-
-.shop-detail {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-md);
-}
-
-.shop-detail-tags {
-  display: flex;
-  gap: var(--s-xxs);
-  flex-wrap: wrap;
-}
-
-.shop-tag-review {
-  border: none !important;
-  background: var(--surface-soft) !important;
-  color: var(--accent-amber) !important;
-  font-weight: 500;
-  font-size: 12px !important;
-  border-radius: var(--r-pill) !important;
-}
-
-.shop-detail-layout {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--s-xl);
-}
-
-.shop-detail-left {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-sm);
-}
-
-.shop-detail-main-img {
-  width: 100% !important;
-  border-radius: var(--r-lg) !important;
-  overflow: hidden;
-  max-height: 420px;
-  object-fit: cover;
-  background: var(--surface-card);
-}
-
-.shop-detail-gallery {
-  display: flex;
-  gap: var(--s-xs);
-  flex-wrap: wrap;
-}
-
-.shop-detail-thumb {
-  border-radius: var(--r-md);
-  overflow: hidden;
-  border: 1px solid var(--hairline);
-  cursor: pointer;
-  transition: border-color 0.15s ease;
-}
-
-.shop-detail-thumb:hover {
-  border-color: var(--primary);
-}
-
-.shop-detail-right {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-md);
-}
-
-.shop-detail-name {
-  margin: 0;
-  font-family: var(--font-display);
-  font-size: 22px;
-  font-weight: 400;
-  letter-spacing: -0.2px;
-  color: var(--ink);
-  line-height: 1.3;
-}
-
-.shop-detail-price-box {
-  display: flex;
-  align-items: baseline;
-  gap: var(--s-sm);
-  padding: var(--s-sm) var(--s-md);
-  background: var(--surface-card);
-  border-radius: var(--r-lg);
-}
-
-.shop-detail-price {
-  font-family: var(--font-display);
-  font-size: 28px;
-  font-weight: 400;
-  color: var(--primary);
-}
-
-.shop-detail-market {
-  font-size: 14px;
-  color: var(--muted-soft);
-  text-decoration: line-through;
-}
-
-.shop-detail-section-label {
-  font-size: 13px;
-  font-weight: 500;
-  display: block;
-  margin-bottom: var(--s-xs);
-  color: var(--muted);
-}
-
-.shop-detail-sku-section {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-xs);
-  margin-bottom: var(--s-md);
-}
-
-.shop-drawer .ant-drawer-content-wrapper {
-  max-width: 100vw;
-}
-
-.shop-drawer .ant-drawer-header {
-  background: var(--surface-soft);
-  border-bottom: 1px solid var(--hairline);
-}
-
-.shop-drawer .ant-drawer-title {
-  font-family: var(--font-display);
-  font-size: 20px;
-  font-weight: 400;
-  color: var(--ink);
-}
-
-.shop-drawer .ant-drawer-body {
-  background: var(--canvas);
-  padding: var(--s-md);
-}
-
-.shop-detail-sku-grid {
-  display: flex;
-  gap: var(--s-xs);
-  flex-wrap: wrap;
-}
-
-.shop-sku-btn {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
-  padding: var(--s-xs) var(--s-sm);
-  border: 1px solid var(--hairline);
-  background: var(--canvas);
-  border-radius: var(--r-md);
-  cursor: pointer;
-  transition: all 0.15s ease;
-  text-align: left;
-}
-
-.shop-sku-btn:hover {
-  border-color: var(--primary);
-}
-
-.shop-sku-btn-active {
-  border-color: var(--primary) !important;
-  background: var(--surface-card) !important;
-}
-
-.shop-sku-name {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--ink);
-}
-
-.shop-sku-info {
-  font-size: 11px;
-  color: var(--muted);
-}
-
-.shop-detail-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--s-md);
-  flex-wrap: wrap;
-}
-
-.shop-detail-qty {
-  display: flex;
-  align-items: center;
-  gap: var(--s-sm);
-}
-
-.shop-detail-btns {
-  display: flex;
-  gap: var(--s-sm);
-}
-
-.shop-detail-desc-card {
-  border-radius: var(--r-lg) !important;
-}
+/* ── Responsive ── */
 
 @media (max-width: 1024px) {
   .shop-product-grid {
@@ -5541,10 +5351,6 @@ pre {
 @media (max-width: 768px) {
   .shop-product-grid {
     grid-template-columns: repeat(2, 1fr);
-  }
-
-  .shop-detail-layout {
-    grid-template-columns: 1fr;
   }
 }
 
