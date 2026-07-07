@@ -1,3 +1,4 @@
+      
 import json
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -860,7 +861,9 @@ class OrderService:
         if not payment_no:
             return False
         result = await db.execute(
-            select(Payment).where(Payment.payment_no == payment_no).options(selectinload(Payment.orders))
+            select(Payment)
+            .where(Payment.payment_no == payment_no)
+            .options(selectinload(Payment.orders).selectinload(Order.items))
         )
         payment = result.scalars().unique().one_or_none()
         if payment is None:
@@ -1348,7 +1351,9 @@ class OrderService:
 
     async def _get_payment_with_orders(self, db: AsyncSession, payment_id: int) -> Payment | None:
         result = await db.execute(
-            select(Payment).where(Payment.id == payment_id).options(selectinload(Payment.orders))
+            select(Payment)
+            .where(Payment.id == payment_id)
+            .options(selectinload(Payment.orders).selectinload(Order.items))
         )
         return result.scalars().unique().one_or_none()
 
@@ -1492,3 +1497,5 @@ class OrderService:
 
 
 order_service = OrderService()
+
+    
