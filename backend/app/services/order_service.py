@@ -1379,6 +1379,11 @@ class OrderService:
         for order in payment.orders:
             if order.status == "pending_payment":
                 order.status = "group_pending" if order.order_type == "group_buy" else "pending_shipment"
+                if order.order_type != "group_buy":
+                    for item in order.items:
+                        product = await db.get(Product, item.product_id)
+                        if product:
+                            product.sales_count += item.quantity
         await self._sync_paid_group_buy_participants(db, payment)
         from app.services.group_buy_service import group_buy_service
 
@@ -1394,6 +1399,10 @@ class OrderService:
         )
         for order in result.scalars():
             order.status = "pending_shipment"
+            for item in order.items:
+                product = await db.get(Product, item.product_id)
+                if product:
+                    product.sales_count += item.quantity
 
     async def _sync_paid_group_buy_participants(self, db: AsyncSession, payment: Payment) -> None:
         order_ids = [order.id for order in payment.orders if order.order_type == "group_buy"]

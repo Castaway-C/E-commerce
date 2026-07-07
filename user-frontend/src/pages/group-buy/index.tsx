@@ -105,9 +105,11 @@ export function GroupBuyPage() {
                         <Text strong ellipsis className="gb-ac-name" title={activity.name}>
                           {activity.name}
                         </Text>
-                        <Text type="secondary" className="gb-ac-sku">
-                          商品 #{activity.product_id} · SKU #{activity.sku_id}
-                        </Text>
+                        {activity.product?.name ? (
+                          <Text type="secondary" ellipsis className="gb-ac-product-name">
+                            {activity.product.name}
+                          </Text>
+                        ) : null}
                       </div>
                     </div>
 

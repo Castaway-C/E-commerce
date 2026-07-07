@@ -8,6 +8,7 @@ import {
   GiftOutlined,
   ReloadOutlined,
   EnvironmentOutlined,
+  MessageOutlined,
 } from '@ant-design/icons'
 
 import {
@@ -17,6 +18,8 @@ import {
   type ProductListItem,
 } from '../../services/product'
 import { promotionService, type CouponTemplate } from '../../services/promotion'
+import { customerService } from '../../services/customerService'
+import { authService } from '../../services/auth'
 import { absoluteAssetUrl, pickErrorMessage, yuan } from '../../utils/format'
 
 const { Text, Paragraph, Title } = Typography
@@ -33,7 +36,6 @@ export function MerchantPage() {
   const [maxPriceYuan, setMaxPriceYuan] = useState<number | null>(null)
   const [sort, setSort] = useState('newest:desc')
   const [coupons, setCoupons] = useState<CouponTemplate[]>([])
-  const [claimedCouponIds, setClaimedCouponIds] = useState<Set<number>>(new Set())
   const [followStatus, setFollowStatus] = useState<MerchantFollowStatus | null>(null)
 
   async function loadMerchant() {
@@ -59,16 +61,8 @@ export function MerchantPage() {
   async function loadCoupons() {
     if (!Number.isFinite(numericMerchantId) || numericMerchantId <= 0) return
     try {
-      const [couponResponse, myCouponResponse] = await Promise.all([
-        promotionService.listCoupons({ merchant_id: numericMerchantId }),
-        promotionService.listMyCoupons().catch(() => ({ data: [] })),
-      ])
+      const couponResponse = await promotionService.listCoupons({ merchant_id: numericMerchantId })
       setCoupons(couponResponse.data)
-      const claimed = new Set<number>()
-      for (const uc of myCouponResponse.data) {
-        claimed.add(uc.coupon_template_id)
-      }
-      setClaimedCouponIds(claimed)
     } catch (error) {
       message.error(pickErrorMessage(error) ?? '店铺优惠券加载失败')
     }
@@ -78,7 +72,6 @@ export function MerchantPage() {
     try {
       await promotionService.claimCoupon(couponId)
       message.success('优惠券领取成功')
-      setClaimedCouponIds((prev) => new Set(prev).add(couponId))
       await loadCoupons()
     } catch (error) {
       message.error(pickErrorMessage(error) ?? '领取失败，请确认已登录且未超过领取限制')
@@ -94,6 +87,22 @@ export function MerchantPage() {
       message.success(response.data.followed ? '已关注店铺' : '已取消关注')
     } catch (error) {
       message.error(pickErrorMessage(error) ?? '请先登录用户账号')
+    }
+  }
+
+  async function contactMerchant() {
+    if (!authService.hasToken()) {
+      message.warning('请先登录用户账号')
+      return
+    }
+    try {
+      await customerService.createConversation({
+        target_type: 'merchant',
+        merchant_id: numericMerchantId,
+      })
+      navigate('/customer-service')
+    } catch (error) {
+      message.error(pickErrorMessage(error) ?? '创建客服会话失败')
     }
   }
 
@@ -172,6 +181,13 @@ export function MerchantPage() {
               >
                 {followStatus?.followed ? '已关注' : '关注店铺'}
               </Button>
+              <Button
+                icon={<MessageOutlined />}
+                onClick={() => void contactMerchant()}
+                className="shop-btn-contact"
+              >
+                联系商家
+              </Button>
               <Link to="/">
                 <Button className="shop-btn-back">返回首页</Button>
               </Link>
@@ -193,7 +209,7 @@ export function MerchantPage() {
           <div className="shop-coupon-list">
             {coupons.map((coupon) => {
               const soldOut = coupon.total_quantity !== 0 && coupon.claimed_quantity >= coupon.total_quantity
-              const claimed = claimedCouponIds.has(coupon.id)
+              const claimed = coupon.received
               return (
                 <div key={coupon.id} className={`shop-coupon-card ${soldOut ? 'shop-coupon-soldout' : ''}`}>
                   <div className="shop-coupon-left">

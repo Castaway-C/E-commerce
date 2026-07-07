@@ -132,6 +132,7 @@ class ProductDetailResponse(BaseModel):
     description: str
     cover_url: str | None = None
     category_id: int | None = None
+    category_name: str | None = None
     status: str
     sales_count: int = 0
     images: list[str]

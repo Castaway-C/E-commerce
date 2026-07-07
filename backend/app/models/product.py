@@ -62,6 +62,7 @@ class Product(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     merchant: Mapped[Merchant] = relationship(back_populates="products")
+    category: Mapped[Category | None] = relationship()
     skus: Mapped[list["Sku"]] = relationship(back_populates="product", cascade="all, delete-orphan")
     images: Mapped[list["ProductImage"]] = relationship(back_populates="product", cascade="all, delete-orphan")
 

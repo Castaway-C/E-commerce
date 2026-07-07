@@ -26,6 +26,13 @@ import { absoluteAssetUrl, yuan } from '../../utils/format'
 
 const { Text, Title, Paragraph } = Typography
 
+function formatSales(count: number): string {
+  if (count < 10) return `已售 ${count} 件`
+  if (count < 100) return `已售 ${Math.floor(count / 10) * 10}+`
+  if (count < 1000) return `已售 ${Math.floor(count / 100) * 100}+`
+  return `已售 ${Math.floor(count / 1000)}k+`
+}
+
 type CategoryTreeItem = Category & {
   label: string
   depth: number
@@ -295,6 +302,7 @@ export function ProductPage() {
                           {product.market_price_cent ? (
                             <span className="pec-market-price">¥{yuan(product.market_price_cent)}</span>
                           ) : null}
+                          <span className="pec-sales">{formatSales(product.sales_count)}</span>
                         </div>
                       </div>
                     </Card>

@@ -20,12 +20,11 @@ import {
   ShoppingCartOutlined,
   ArrowLeftOutlined,
   FireOutlined,
-  CustomerServiceOutlined,
+  ShopOutlined,
 } from '@ant-design/icons'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { authService } from '../../services/auth'
-import { customerService } from '../../services/customerService'
 import { getApiErrorMessage } from '../../services/http'
 import { groupBuyService, type GroupBuyActivity } from '../../services/groupBuy'
 import { orderService } from '../../services/order'
@@ -164,24 +163,6 @@ export function ProductDetailPage() {
     }
   }
 
-  async function contactMerchant() {
-    if (!product) return
-    if (!authService.hasToken()) {
-      message.warning('请先登录用户账号')
-      return
-    }
-    try {
-      await customerService.createConversation({
-        target_type: 'merchant',
-        merchant_id: product.merchant.id,
-        product_id: product.id,
-      })
-      navigate('/customer-service')
-    } catch (error) {
-      message.error(`创建客服会话失败：${getApiErrorMessage(error)}`)
-    }
-  }
-
   useEffect(() => {
     if (Number.isFinite(productId)) {
       setProduct(null)
@@ -266,14 +247,20 @@ export function ProductDetailPage() {
                   <h1 className="detail-title">{product.name}</h1>
                   <div className="detail-tags">
                     <Tag className="detail-tag-id">#{product.id}</Tag>
-                    <Link to={`/merchants/${product.merchant.id}`}>
-                      <Tag className="detail-tag-merchant">{product.merchant.name}</Tag>
-                    </Link>
-                    {product.category_id ? (
-                      <Tag className="detail-tag-cat">分类 #{product.category_id}</Tag>
+                    {product.category_name ? (
+                      <Tag className="detail-tag-cat">{product.category_name}</Tag>
                     ) : null}
                   </div>
                 </div>
+
+                {/* Merchant Card */}
+                <Link to={`/merchants/${product.merchant.id}`} className="detail-merchant-card">
+                  <ShopOutlined className="detail-merchant-icon" />
+                  <div className="detail-merchant-info">
+                    <span className="detail-merchant-name">{product.merchant.name}</span>
+                    <span className="detail-merchant-action">进店逛逛 →</span>
+                  </div>
+                </Link>
 
                 {/* Price Block */}
                 <div className="detail-price-block">
@@ -376,14 +363,6 @@ export function ProductDetailPage() {
                     className="btn-toggle-fav"
                   >
                     {favoriteStatus?.favorited ? '已收藏' : '收藏'}
-                  </Button>
-                  <Button
-                    size="large"
-                    icon={<CustomerServiceOutlined />}
-                    onClick={contactMerchant}
-                    className="btn-contact-merchant"
-                  >
-                    联系商家
                   </Button>
                 </div>
               </div>

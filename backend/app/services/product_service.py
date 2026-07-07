@@ -642,6 +642,7 @@ class ProductService:
             description=product.description,
             cover_url=product.cover_url,
             category_id=product.category_id,
+            category_name=product.category.name if product.category else None,
             status=product.status,
             sales_count=product.sales_count,
             images=[image.url for image in sorted(product.images, key=lambda item: item.sort_order)],
@@ -677,6 +678,7 @@ class ProductService:
     def _product_query(self, include_off_sale: bool) -> Select[tuple[Product]]:
         statement = select(Product).options(
             selectinload(Product.merchant),
+            selectinload(Product.category),
             selectinload(Product.skus),
             selectinload(Product.images),
         )
