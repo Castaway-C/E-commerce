@@ -163,8 +163,11 @@ cd admin-frontend
 
 ## 数据库和迁移注意
 
-- 当前开发环境主要依赖 ORM `create_all` 建表。
-- 给已有表新增字段时，要同步 `backend/app/db/session.py` 的 SQLite 补列逻辑。
+- 当前开发和答辩环境默认使用 MySQL，连接串配置在根目录 `.env` 的 `DATABASE_URL`，本地配置见 `docs/mysql-setup.md`。
+- MySQL 数据库本身用 `backend/scripts/init_mysql_db.py` 创建；SQLAlchemy `create_all` 只负责在已有库中建表。
+- 原 SQLite 数据不会自动迁移到 MySQL；切换新库后平台管理员、分类、商家、商品、订单等数据都需要重新创建或重新录入。
+- 当前开发环境主要依赖 ORM `create_all` 建表；新库首次启动只自动建表，不自动写入分类。分类属于平台运营配置，由平台后台自行创建。
+- SQLite 补列逻辑仅作为历史兼容保留，不再作为默认开发路径；新增字段优先考虑 MySQL 新库建表和后续 Alembic 迁移方案。
 - 如果必须改已有表字段，要说明本地开发库如何处理，必要时提供迁移或清库建议。
 
 ## Git 和协作

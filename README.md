@@ -4,7 +4,7 @@
 
 ## 技术栈
 
-- 后端：FastAPI + SQLAlchemy async + Celery，当前本地默认可使用 SQLite 快速联调，后续可切换 MySQL。
+- 后端：FastAPI + SQLAlchemy async + MySQL + Celery；SQLite 仅保留为历史兼容，不再作为默认开发库。
 - 用户端：React + TypeScript + Vite + Ant Design 5。
 - 管理端：React + TypeScript + Vite + Ant Design 5。
 - Python：3.12.10。
@@ -66,7 +66,7 @@
 
 ## 启动与联调
 
-详见 [docs/dev-setup.md](./docs/dev-setup.md)。
+详见 [docs/dev-setup.md](./docs/dev-setup.md)。首次配置本地数据库先看 [docs/mysql-setup.md](./docs/mysql-setup.md)。
 
 后端：
 

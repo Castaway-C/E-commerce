@@ -1,12 +1,12 @@
 ﻿# 开发启动说明
 
-本文记录当前版本的本地启动、测试数据维护、定时任务、人工验收流程和移交检查项。当前除 AI 助手外，项目主要业务功能已经前后端完整实现；后续开发仍按“后端、前端、文档、测试同步”的方式推进。
+本文记录当前版本的本地启动、测试数据维护、定时任务、人工验收流程和移交检查项。当前项目主要业务功能已经前后端完整实现，默认开发数据库已切换为 MySQL；后续开发仍按“后端、前端、文档、测试同步”的方式推进。
 
 ## 环境要求
 
 - Python 3.12.10
 - Node.js 18 或更高版本
-- MySQL 8.0（当前本地默认可使用 SQLite 快速联调）
+- MySQL 8.0（当前默认开发和答辩数据库）
 - Redis 7.x（定时任务、缓存和后续 WebSocket/库存能力需要）
 
 ## 后端启动
@@ -19,7 +19,14 @@ pip install -r requirements.txt
 uvicorn main:app --reload
 ```
 
-开发环境默认会在启动时根据 ORM 模型创建 SQLite 表，便于本地快速联调。正式联调 MySQL 时，请在根目录 `.env` 中配置 `DATABASE_URL`。
+开发环境默认使用 MySQL，并会在启动时根据 ORM 模型创建表。首次配置 MySQL 请先阅读 [MySQL 本地启动与配置](./mysql-setup.md)，在根目录 `.env` 中配置 `DATABASE_URL`，再执行：
+
+```powershell
+cd backend
+.\.venv\Scripts\python.exe scripts\init_mysql_db.py
+```
+
+切换到 MySQL 后，原 SQLite 文件中的数据不会自动迁移；平台管理员、分类、商家、商品、订单等数据都需要在新 MySQL 库中重新创建或重新录入。
 
 如新增接口前端返回 404，先确认当前 8000 端口是否加载了最新代码：
 
@@ -35,14 +42,14 @@ netstat -ano | findstr :8000
 
 ```powershell
 cd backend
-python scripts/create_admin.py
+.\.venv\Scripts\python.exe scripts\create_admin.py
 ```
 
 管理员密码需要 8-64 位。可以用下面命令验证或重置本地管理员密码：
 
 ```powershell
-python scripts/create_admin.py --verify admin_01
-python scripts/create_admin.py --reset-password admin_01
+.\.venv\Scripts\python.exe scripts\create_admin.py --verify admin_01
+.\.venv\Scripts\python.exe scripts\create_admin.py --reset-password admin_01
 ```
 
 商家账号必须通过管理端 `/merchant-apply` 自助注册入驻。平台运营审核通过后，系统会创建店铺并把该账号升级为 `merchant_operator`。
@@ -51,14 +58,15 @@ python scripts/create_admin.py --reset-password admin_01
 
 ```powershell
 cd backend
-python scripts/clear_test_data.py --yes
+.\.venv\Scripts\python.exe scripts\clear_test_data.py --yes
 ```
 
 说明：
 
 - 默认清空普通用户、商品、店铺、订单、售后、优惠券、社区、操作日志、商家入驻申请和商家账号等测试数据。
 - 默认保留 `platform_operator` 平台管理员账号，方便继续登录。
-- 如需连平台管理员也清掉，可执行 `python scripts/clear_test_data.py --yes --include-platform-admins`，之后需要重新运行 `python scripts/create_admin.py`。
+- MySQL 下清理脚本会临时关闭外键检查，删除结束后重新开启。
+- 如需连平台管理员也清掉，可执行 `.\.venv\Scripts\python.exe scripts\clear_test_data.py --yes --include-platform-admins`，之后需要重新运行 `.\.venv\Scripts\python.exe scripts\create_admin.py`。
 - 默认保留平台配置（积分、会员权益等），避免清库后运营配置丢失；如需连平台配置也清掉，可追加 `--include-platform-settings`。
 
 ## Celery 定时任务

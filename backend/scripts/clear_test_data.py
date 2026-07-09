@@ -7,8 +7,9 @@ BACKEND_DIR = Path(__file__).resolve().parents[1]
 if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
-from sqlalchemy import delete, update
+from sqlalchemy import delete, text, update
 
+from app.core.config import settings
 from app.db.session import AsyncSessionLocal, init_db
 from app.models.community import (
     CommunityComment,
@@ -63,56 +64,64 @@ def build_parser() -> argparse.ArgumentParser:
 async def clear_test_data(include_platform_admins: bool, include_platform_settings: bool) -> None:
     await init_db()
     async with AsyncSessionLocal() as session:
-        await session.execute(update(Category).values(parent_id=None))
+        mysql = settings.database_url.startswith("mysql")
+        if mysql:
+            await session.execute(text("SET FOREIGN_KEY_CHECKS=0"))
+        try:
+            await session.execute(update(Category).values(parent_id=None))
 
-        for model in [
-            CustomerServiceMessage,
-            CustomerServiceConversation,
-            GroupBuyParticipant,
-            GroupBuyGroup,
-            GroupBuyActivity,
-            GrassConversionReward,
-            CommunityPostFavorite,
-            CommunityLike,
-            CommunityComment,
-            CommunityPost,
-            ProductReview,
-            RefundLog,
-            Refund,
-            OrderItem,
-            Order,
-            Payment,
-            CartItem,
-            UserCoupon,
-            CouponTemplate,
-            FullDiscountActivity,
-            HomeBanner,
-            ProductFavorite,
-            MerchantFollow,
-            SkuStockLog,
-            ProductImage,
-            Sku,
-            Product,
-            Category,
-            MerchantApplication,
-            Merchant,
-            UserSignIn,
-            PointsLog,
-            UserAddress,
-            User,
-            AdminOperationLog,
-        ]:
-            await session.execute(delete(model))
+            for model in [
+                CustomerServiceMessage,
+                CustomerServiceConversation,
+                GroupBuyParticipant,
+                GroupBuyGroup,
+                GroupBuyActivity,
+                GrassConversionReward,
+                CommunityPostFavorite,
+                CommunityLike,
+                CommunityComment,
+                CommunityPost,
+                ProductReview,
+                RefundLog,
+                Refund,
+                OrderItem,
+                Order,
+                Payment,
+                CartItem,
+                UserCoupon,
+                CouponTemplate,
+                FullDiscountActivity,
+                HomeBanner,
+                ProductFavorite,
+                MerchantFollow,
+                SkuStockLog,
+                ProductImage,
+                Sku,
+                Product,
+                Category,
+                MerchantApplication,
+                Merchant,
+                UserSignIn,
+                PointsLog,
+                UserAddress,
+                User,
+                AdminOperationLog,
+            ]:
+                await session.execute(delete(model))
 
-        if include_platform_settings:
-            await session.execute(delete(PlatformSetting))
+            if include_platform_settings:
+                await session.execute(delete(PlatformSetting))
 
-        if include_platform_admins:
-            await session.execute(delete(AdminUser))
-        else:
-            await session.execute(delete(AdminUser).where(AdminUser.role != "platform_operator"))
+            if include_platform_admins:
+                await session.execute(delete(AdminUser))
+            else:
+                await session.execute(delete(AdminUser).where(AdminUser.role != "platform_operator"))
 
-        await session.commit()
+            await session.commit()
+        finally:
+            if mysql:
+                await session.execute(text("SET FOREIGN_KEY_CHECKS=1"))
+                await session.commit()
 
 
 async def main() -> None:

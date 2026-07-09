@@ -4,6 +4,7 @@
 
 - [协作移交说明](./handoff.md)
 - [开发启动说明](./dev-setup.md)
+- [MySQL 本地启动与配置](./mysql-setup.md)
 - [协作移交与后续迭代路线图](./development-roadmap.md)
 - [接口总览](./api/README.md)
 - [接口规范](./api/api-spec.md)
@@ -13,6 +14,7 @@
 - [项目结构说明](./project-structure.md)
 - [编码与协作约定](./conventions.md)
 - [支付宝沙箱配置说明](./alipay-setup.md)
+- [MySQL 本地启动与配置](./mysql-setup.md)
 
 ## 当前主文档
 

@@ -64,7 +64,7 @@
 ## 数据库
 
 - 开发环境允许 ORM 自动建表。
-- 给旧表新增字段时，必须考虑 SQLite 开发库兼容；必要时同步 `backend/app/db/session.py` 的补列逻辑。
+- 给旧表新增字段时，默认按 MySQL 开发库处理；必要时提供清库重建步骤或 Alembic 迁移脚本。`backend/app/db/session.py` 中的 SQLite 补列逻辑仅作历史兼容，不作为默认开发路径。
 - 模型稳定后逐步补齐 Alembic 迁移。
 
 ## 文档
