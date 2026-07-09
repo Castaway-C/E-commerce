@@ -9,6 +9,7 @@ import { AdminCommunityPage } from '../pages/admin/community'
 import { AdminCouponsPage } from '../pages/admin/coupons'
 import { AdminCustomerServicePage } from '../pages/admin/customer-service'
 import { AdminDashboardPage } from '../pages/admin/dashboard'
+import { AdminHomeBannersPage } from '../pages/admin/home-banners'
 import { AdminMerchantReviewPage } from '../pages/admin/merchant-review'
 import { AdminOrdersPage } from '../pages/admin/orders'
 import { AdminProductsPage } from '../pages/admin/products'
@@ -51,6 +52,7 @@ export function AppRoutes() {
       <Route path="/admin/login" element={<AdminLoginPage />} />
       <Route element={<AdminProtectedRoute><AdminLayout /></AdminProtectedRoute>}>
         <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
+        <Route path="/admin/home-banners" element={<AdminHomeBannersPage />} />
         <Route path="/admin/merchant-review" element={<AdminMerchantReviewPage />} />
         <Route path="/admin/category" element={<AdminCategoryPage />} />
         <Route path="/admin/products" element={<AdminProductsPage />} />

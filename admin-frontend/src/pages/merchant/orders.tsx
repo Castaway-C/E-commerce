@@ -14,6 +14,30 @@ import { SESSION, type Order, type OrderDetail, type PageResult, pageList } from
 
 const { Title, Text } = Typography
 
+const LOGISTICS_OPTIONS = [
+  { value: '顺丰速运', label: '顺丰速运' },
+  { value: '京东物流', label: '京东物流' },
+  { value: '中通快递', label: '中通快递' },
+  { value: '圆通速递', label: '圆通速递' },
+  { value: '申通快递', label: '申通快递' },
+  { value: '韵达快递', label: '韵达快递' },
+  { value: '商家配送', label: '商家配送' },
+]
+
+function mockTrackingNo(company = '商家配送') {
+  const prefixMap: Record<string, string> = {
+    顺丰速运: 'SF',
+    京东物流: 'JD',
+    中通快递: 'ZT',
+    圆通速递: 'YT',
+    申通快递: 'ST',
+    韵达快递: 'YD',
+    商家配送: 'MYGO',
+  }
+  const prefix = prefixMap[company] ?? 'MYGO'
+  return `${prefix}${Date.now()}${Math.floor(Math.random() * 90 + 10)}`
+}
+
 function downloadTextFile(content: string, filename: string, type = 'text/csv;charset=utf-8') {
   const blob = new Blob([content], { type })
   const url = URL.createObjectURL(blob)
@@ -68,7 +92,18 @@ export function MerchantOrdersPage() {
     const data = await run<OrderDetail>('订单详情', () =>
       http.get(`/admin/orders/${orderId}`, { headers: { 'X-Admin-Session': SESSION } }),
     )
-    if (data) setSelectedOrderDetail(data)
+    if (data) {
+      setSelectedOrderDetail(data)
+      const company = data.logistics_company || '商家配送'
+      shippingForm.setFieldsValue({
+        logistics_company: company,
+        tracking_no: data.tracking_no || (data.status === 'pending_shipment' ? mockTrackingNo(company) : undefined),
+      })
+    }
+  }
+
+  async function openShippingDetail(orderId: number) {
+    await loadOrderDetail(orderId)
   }
 
   async function exportOrdersCsv() {
@@ -88,13 +123,14 @@ export function MerchantOrdersPage() {
   }
 
   async function shipOrder(orderId: number) {
-    const values = shippingForm.getFieldsValue()
+    const values = await shippingForm.validateFields()
+    const company = values.logistics_company
     await run('订单发货', () =>
       http.post(
         `/admin/orders/${orderId}/ship`,
         {
-          logistics_company: values.logistics_company || '商家配送',
-          tracking_no: values.tracking_no || `NO${Date.now()}`,
+          logistics_company: company,
+          tracking_no: values.tracking_no,
         },
         { headers: { 'X-Admin-Session': SESSION } },
       ),
@@ -129,7 +165,7 @@ export function MerchantOrdersPage() {
       render: (_, record) => (
         <Space>
           <Button onClick={() => loadOrderDetail(record.id)}>详情</Button>
-          <Button disabled={record.status !== 'pending_shipment'} onClick={() => shipOrder(record.id)}>
+          <Button disabled={record.status !== 'pending_shipment'} onClick={() => openShippingDetail(record.id)}>
             发货
           </Button>
         </Space>
@@ -233,16 +269,31 @@ export function MerchantOrdersPage() {
                 layout="inline"
                 initialValues={{
                   logistics_company: '商家配送',
-                  tracking_no: `NO${Date.now()}`,
+                  tracking_no: mockTrackingNo('商家配送'),
                 }}
                 onFinish={() => shipOrder(selectedOrderDetail.id)}
               >
-                <Form.Item label="物流公司" name="logistics_company">
-                  <Input />
+                <Form.Item label="物流公司" name="logistics_company" rules={[{ required: true, message: '请选择物流公司' }]}>
+                  <Select
+                    showSearch
+                    style={{ width: 140 }}
+                    options={LOGISTICS_OPTIONS}
+                    onChange={(company) => {
+                      shippingForm.setFieldValue('tracking_no', mockTrackingNo(company))
+                    }}
+                  />
                 </Form.Item>
-                <Form.Item label="物流单号" name="tracking_no">
-                  <Input />
+                <Form.Item label="物流单号" name="tracking_no" rules={[{ required: true, message: '请输入物流单号' }]}>
+                  <Input style={{ width: 210 }} />
                 </Form.Item>
+                <Button
+                  onClick={() => {
+                    const company = shippingForm.getFieldValue('logistics_company') || '商家配送'
+                    shippingForm.setFieldValue('tracking_no', mockTrackingNo(company))
+                  }}
+                >
+                  生成模拟单号
+                </Button>
                 <Button
                   type="primary"
                   htmlType="submit"

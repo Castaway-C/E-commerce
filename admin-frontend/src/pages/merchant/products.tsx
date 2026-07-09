@@ -323,9 +323,9 @@ export function MerchantProductsPage() {
     {
       title: '商品',
       dataIndex: 'name',
-      width: 360,
+      width: 460,
       render: (_, record) => (
-        <Space align="start" style={{ minWidth: 300 }}>
+        <Space align="start" style={{ minWidth: 420 }}>
           {record.cover_url ? <Image width={64} height={64} src={assetUrl(record.cover_url)} /> : <div className="table-thumb">图</div>}
           <Space direction="vertical" size={4}>
             <Text strong>{record.name}</Text>
@@ -340,7 +340,7 @@ export function MerchantProductsPage() {
     { title: '状态', dataIndex: 'status', width: 110, render: (status) => <StatusTag status={status} /> },
     {
       title: 'SKU',
-      width: 420,
+      width: 560,
       render: (_, record) =>
         record.skus.map((sku) => (
           <div key={sku.id} className="sku-line">
@@ -354,7 +354,7 @@ export function MerchantProductsPage() {
     },
     {
       title: '操作',
-      width: 190,
+      width: 220,
       render: (_, record) => (
         <Space wrap>
           <Button onClick={() => selectProduct(record)}>编辑</Button>
@@ -377,85 +377,14 @@ export function MerchantProductsPage() {
       </section>
 
       <Row gutter={[24, 24]}>
-        <Col span={10} id="merchant-create-product">
-          <Card title="上传商品">
-            <Form layout="vertical" onFinish={createProduct} initialValues={{ sku_name: '默认规格', price_yuan: 19.9, stock: 20 }}>
-              <Form.Item label="分类" name="category_id">
-                <Select
-                  allowClear
-                  showSearch
-                  optionFilterProp="label"
-                  placeholder="选择商品分类"
-                  options={categoryOptions}
-                />
-              </Form.Item>
-              <Form.Item label="商品名称" name="name" rules={[{ required: true }]}>
-                <Input />
-              </Form.Item>
-              <Form.Item label="商品描述" name="description">
-                <Input.TextArea rows={3} />
-              </Form.Item>
-              <Form.Item label="商品图片" tooltip="可一次选择多张图片，第一张作为封面，其余在商品详情中展示">
-                <Upload
-                  multiple
-                  listType="picture-card"
-                  fileList={uploadFiles}
-                  beforeUpload={(file) => uploadImage(file)}
-                  onRemove={(file) => {
-                    setImageUrls((items) => items.filter((item) => assetUrl(item) !== file.url))
-                    return true
-                  }}
-                >
-                  <Button>上传图片</Button>
-                </Upload>
-              </Form.Item>
-              <Form.Item label="商品详情图片" tooltip="图文详情区单独展示，不参与商品轮播图">
-                <Upload
-                  multiple
-                  listType="picture-card"
-                  fileList={detailUploadFiles}
-                  beforeUpload={(file) => uploadDetailImage(file)}
-                  onRemove={(file) => {
-                    setDetailImageUrls((items) => items.filter((item) => assetUrl(item) !== file.url))
-                    return true
-                  }}
-                >
-                  <Button>上传详情图</Button>
-                </Upload>
-              </Form.Item>
-              <Row gutter={12}>
-                <Col span={8}>
-                  <Form.Item label="SKU 名称" name="sku_name" rules={[{ required: true }]}>
-                    <Input />
-                  </Form.Item>
-                </Col>
-                <Col span={6}>
-                  <Form.Item label="价格（元）" name="price_yuan" rules={[{ required: true }]}>
-                    <InputNumber min={0} precision={2} style={{ width: '100%' }} />
-                  </Form.Item>
-                </Col>
-                <Col span={6}>
-                  <Form.Item label="划线价（元）" name="market_price_yuan">
-                    <InputNumber min={0} precision={2} style={{ width: '100%' }} />
-                  </Form.Item>
-                </Col>
-                <Col span={6}>
-                  <Form.Item label="库存" name="stock" rules={[{ required: true }]}>
-                    <InputNumber min={0} style={{ width: '100%' }} />
-                  </Form.Item>
-                </Col>
-              </Row>
-              <Button type="primary" htmlType="submit" disabled={!merchantId}>创建并上架</Button>
-            </Form>
-          </Card>
-        </Col>
-        <Col span={14} id="merchant-products">
+        <Col span={24} id="merchant-products">
           <Card title="本店商品" extra={<Button onClick={() => loadProducts()}>刷新</Button>}>
             <Form
               form={productFilterForm}
               layout="inline"
               onFinish={loadProducts}
               initialValues={{ sort: 'newest:desc' }}
+              style={{ marginBottom: 16 }}
             >
               <Form.Item label="最低价" name="min_price_yuan">
                 <InputNumber min={0} precision={2} addonAfter="元" />
@@ -481,7 +410,7 @@ export function MerchantProductsPage() {
               columns={productColumns}
               dataSource={products}
               pagination={{ pageSize: 6 }}
-              scroll={{ x: 1120 }}
+              scroll={{ x: 1360 }}
             />
             {selectedProduct ? (
               <Card
@@ -600,6 +529,88 @@ export function MerchantProductsPage() {
                 </Card>
               </Card>
             ) : null}
+          </Card>
+        </Col>
+        <Col span={24} id="merchant-create-product">
+          <Card title="上传商品">
+            <Form layout="vertical" onFinish={createProduct} initialValues={{ sku_name: '默认规格', price_yuan: 19.9, stock: 20 }}>
+              <Row gutter={16}>
+                <Col span={8}>
+                  <Form.Item label="分类" name="category_id">
+                    <Select
+                      allowClear
+                      showSearch
+                      optionFilterProp="label"
+                      placeholder="选择商品分类"
+                      options={categoryOptions}
+                    />
+                  </Form.Item>
+                </Col>
+                <Col span={16}>
+                  <Form.Item label="商品名称" name="name" rules={[{ required: true }]}>
+                    <Input />
+                  </Form.Item>
+                </Col>
+                <Col span={24}>
+                  <Form.Item label="商品描述" name="description">
+                    <Input.TextArea rows={3} />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item label="商品图片" tooltip="可一次选择多张图片，第一张作为封面，其余在商品详情中展示">
+                    <Upload
+                      multiple
+                      listType="picture-card"
+                      fileList={uploadFiles}
+                      beforeUpload={(file) => uploadImage(file)}
+                      onRemove={(file) => {
+                        setImageUrls((items) => items.filter((item) => assetUrl(item) !== file.url))
+                        return true
+                      }}
+                    >
+                      <Button>上传图片</Button>
+                    </Upload>
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item label="商品详情图片" tooltip="图文详情区单独展示，不参与商品轮播图">
+                    <Upload
+                      multiple
+                      listType="picture-card"
+                      fileList={detailUploadFiles}
+                      beforeUpload={(file) => uploadDetailImage(file)}
+                      onRemove={(file) => {
+                        setDetailImageUrls((items) => items.filter((item) => assetUrl(item) !== file.url))
+                        return true
+                      }}
+                    >
+                      <Button>上传详情图</Button>
+                    </Upload>
+                  </Form.Item>
+                </Col>
+                <Col span={6}>
+                  <Form.Item label="SKU 名称" name="sku_name" rules={[{ required: true }]}>
+                    <Input />
+                  </Form.Item>
+                </Col>
+                <Col span={6}>
+                  <Form.Item label="价格（元）" name="price_yuan" rules={[{ required: true }]}>
+                    <InputNumber min={0} precision={2} style={{ width: '100%' }} />
+                  </Form.Item>
+                </Col>
+                <Col span={6}>
+                  <Form.Item label="划线价（元）" name="market_price_yuan">
+                    <InputNumber min={0} precision={2} style={{ width: '100%' }} />
+                  </Form.Item>
+                </Col>
+                <Col span={6}>
+                  <Form.Item label="库存" name="stock" rules={[{ required: true }]}>
+                    <InputNumber min={0} style={{ width: '100%' }} />
+                  </Form.Item>
+                </Col>
+              </Row>
+              <Button type="primary" htmlType="submit" disabled={!merchantId}>创建并上架</Button>
+            </Form>
           </Card>
         </Col>
       </Row>

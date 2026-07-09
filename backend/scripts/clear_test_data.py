@@ -7,14 +7,41 @@ BACKEND_DIR = Path(__file__).resolve().parents[1]
 if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
-from sqlalchemy import delete
+from sqlalchemy import delete, update
 
 from app.db.session import AsyncSessionLocal, init_db
-from app.models.community import CommunityComment, CommunityLike, CommunityPost, GrassConversionReward
-from app.models.order import CartItem, Order, OrderItem, Payment, ProductReview, Refund
-from app.models.product import Category, Merchant, Product, ProductImage, Sku, SkuStockLog
-from app.models.promotion import CouponTemplate, UserCoupon
-from app.models.user import AdminOperationLog, AdminUser, MerchantApplication, PointsLog, User, UserAddress
+from app.models.community import (
+    CommunityComment,
+    CommunityLike,
+    CommunityPost,
+    CommunityPostFavorite,
+    GrassConversionReward,
+)
+from app.models.customer_service import CustomerServiceConversation, CustomerServiceMessage
+from app.models.group_buy import GroupBuyActivity, GroupBuyGroup, GroupBuyParticipant
+from app.models.order import CartItem, Order, OrderItem, Payment, ProductReview, Refund, RefundLog
+from app.models.product import (
+    Category,
+    HomeBanner,
+    Merchant,
+    MerchantFollow,
+    Product,
+    ProductFavorite,
+    ProductImage,
+    Sku,
+    SkuStockLog,
+)
+from app.models.promotion import CouponTemplate, FullDiscountActivity, UserCoupon
+from app.models.user import (
+    AdminOperationLog,
+    AdminUser,
+    MerchantApplication,
+    PlatformSetting,
+    PointsLog,
+    User,
+    UserAddress,
+    UserSignIn,
+)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -25,18 +52,32 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="also delete platform_operator admin accounts",
     )
+    parser.add_argument(
+        "--include-platform-settings",
+        action="store_true",
+        help="also delete platform settings such as points and member benefit configuration",
+    )
     return parser
 
 
-async def clear_test_data(include_platform_admins: bool) -> None:
+async def clear_test_data(include_platform_admins: bool, include_platform_settings: bool) -> None:
     await init_db()
     async with AsyncSessionLocal() as session:
+        await session.execute(update(Category).values(parent_id=None))
+
         for model in [
+            CustomerServiceMessage,
+            CustomerServiceConversation,
+            GroupBuyParticipant,
+            GroupBuyGroup,
+            GroupBuyActivity,
             GrassConversionReward,
+            CommunityPostFavorite,
             CommunityLike,
             CommunityComment,
             CommunityPost,
             ProductReview,
+            RefundLog,
             Refund,
             OrderItem,
             Order,
@@ -44,6 +85,10 @@ async def clear_test_data(include_platform_admins: bool) -> None:
             CartItem,
             UserCoupon,
             CouponTemplate,
+            FullDiscountActivity,
+            HomeBanner,
+            ProductFavorite,
+            MerchantFollow,
             SkuStockLog,
             ProductImage,
             Sku,
@@ -51,12 +96,16 @@ async def clear_test_data(include_platform_admins: bool) -> None:
             Category,
             MerchantApplication,
             Merchant,
+            UserSignIn,
             PointsLog,
             UserAddress,
             User,
             AdminOperationLog,
         ]:
             await session.execute(delete(model))
+
+        if include_platform_settings:
+            await session.execute(delete(PlatformSetting))
 
         if include_platform_admins:
             await session.execute(delete(AdminUser))
@@ -70,11 +119,17 @@ async def main() -> None:
     args = build_parser().parse_args()
     if not args.yes:
         raise SystemExit("Refusing to clear data without --yes")
-    await clear_test_data(args.include_platform_admins)
+    await clear_test_data(args.include_platform_admins, args.include_platform_settings)
+    parts = ["cleared test data"]
     if args.include_platform_admins:
-        print("cleared test data, including platform admin accounts")
+        parts.append("including platform admin accounts")
     else:
-        print("cleared test data, kept platform_operator admin accounts")
+        parts.append("kept platform_operator admin accounts")
+    if args.include_platform_settings:
+        parts.append("including platform settings")
+    else:
+        parts.append("kept platform settings")
+    print(", ".join(parts))
 
 
 if __name__ == "__main__":

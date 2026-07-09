@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -476,7 +476,10 @@ class OrderService:
         statement = (
             select(Order)
             .where(Order.user_id == user.id)
-            .options(selectinload(Order.items))
+            .options(
+                selectinload(Order.merchant),
+                selectinload(Order.items).selectinload(OrderItem.product).selectinload(Product.images),
+            )
             .order_by(Order.created_at.desc())
         )
         if status:
@@ -1007,7 +1010,11 @@ class OrderService:
         amount_before_points: int,
     ) -> tuple[int, int, int]:
         config = await platform_setting_service.get_member_points_config(db)
-        max_discount_amount = amount_before_points * config.max_points_discount_percent // 100
+        level_rule = await self._resolve_member_level_rule(db, user, config)
+        discount_percent = level_rule.max_points_discount_percent
+        if discount_percent is None:
+            discount_percent = config.max_points_discount_percent
+        max_discount_amount = amount_before_points * discount_percent // 100
         max_points_by_amount = max_discount_amount * config.points_to_yuan_rate // 100
         max_points_usable = max(0, min(user.points, max_points_by_amount))
         if requested_points <= 0 or amount_before_points <= 0 or max_points_usable <= 0:
@@ -1019,6 +1026,20 @@ class OrderService:
         if discount_amount <= 0:
             raise AppException(40005, "使用积分不足以抵扣 0.01 元")
         return requested_points, discount_amount, max_points_usable
+
+    async def _resolve_member_level_rule(self, db: AsyncSession, user: User, config):
+        growth_value = await db.scalar(
+            select(func.coalesce(func.sum(Order.pay_amount_cent), 0)).where(
+                Order.user_id == user.id,
+                Order.status.in_(["completed", "closed", "after_sale"]),
+            )
+        ) or 0
+        rules = sorted(config.level_rules, key=lambda item: item.threshold_cent, reverse=True)
+        for rule in rules:
+            if int(growth_value) >= rule.threshold_cent:
+                user.level = rule.level
+                return rule
+        return min(config.level_rules, key=lambda item: item.threshold_cent)
 
     def _allocate_points_discount_by_merchant(
         self,
@@ -1306,15 +1327,22 @@ class OrderService:
             invalid_reason = "商品未上架"
         elif sku.stock < quantity:
             invalid_reason = "库存不足"
+        cover_url = sku.product.cover_url
+        if not cover_url and sku.product.images:
+            first_image = sorted(sku.product.images, key=lambda image: (image.sort_order, image.id))[0]
+            cover_url = first_image.url
         return CartItemResponse(
             sku_id=sku.id,
             product_id=sku.product_id,
+            merchant_id=sku.product.merchant_id,
+            merchant_name=sku.product.merchant.name if sku.product.merchant else f"店铺 #{sku.product.merchant_id}",
+            merchant_logo_url=sku.product.merchant.logo_url if sku.product.merchant else None,
             product_name=sku.product.name,
             sku_name=sku.name,
             price_cent=sku.price_cent,
             quantity=quantity,
             checked=checked,
-            cover_url=sku.product.cover_url,
+            cover_url=cover_url,
             source_post_id=source_post_id,
             source_label="种草来源" if source_post_id is not None else None,
             invalid_reason=invalid_reason,
@@ -1322,7 +1350,10 @@ class OrderService:
 
     async def _get_sku(self, db: AsyncSession, sku_id: int) -> Sku:
         result = await db.execute(
-            select(Sku).where(Sku.id == sku_id).options(selectinload(Sku.product).selectinload(Product.merchant))
+            select(Sku).where(Sku.id == sku_id).options(
+                selectinload(Sku.product).selectinload(Product.merchant),
+                selectinload(Sku.product).selectinload(Product.images),
+            )
         )
         sku = result.scalars().one_or_none()
         if sku is None:
@@ -1337,7 +1368,14 @@ class OrderService:
         return cart_item
 
     async def _get_order(self, db: AsyncSession, order_id: int) -> Order:
-        result = await db.execute(select(Order).where(Order.id == order_id).options(selectinload(Order.items)))
+        result = await db.execute(
+            select(Order)
+            .where(Order.id == order_id)
+            .options(
+                selectinload(Order.merchant),
+                selectinload(Order.items).selectinload(OrderItem.product).selectinload(Product.images),
+            )
+        )
         order = result.scalars().unique().one_or_none()
         if order is None:
             raise AppException(40004, "订单不存在", 404)
@@ -1353,7 +1391,13 @@ class OrderService:
         result = await db.execute(
             select(Payment)
             .where(Payment.id == payment_id)
-            .options(selectinload(Payment.orders).selectinload(Order.items))
+            .options(
+                selectinload(Payment.orders).selectinload(Order.merchant),
+                selectinload(Payment.orders)
+                .selectinload(Order.items)
+                .selectinload(OrderItem.product)
+                .selectinload(Product.images)
+            )
         )
         return result.scalars().unique().one_or_none()
 
@@ -1466,6 +1510,16 @@ class OrderService:
             "address_tag": address.address_tag,
         }
 
+    def _order_item_cover_url(self, item: OrderItem) -> str | None:
+        product = getattr(item, "product", None)
+        if product is None:
+            return None
+        cover_url = product.cover_url
+        if not cover_url and product.images:
+            first_image = sorted(product.images, key=lambda image: (image.sort_order, image.id))[0]
+            cover_url = first_image.url
+        return cover_url
+
     def to_order_response(self, order: Order) -> OrderResponse:
         shipping_address = None
         if order.shipping_address_snapshot:
@@ -1475,6 +1529,8 @@ class OrderService:
             order_no=order.order_no,
             payment_id=order.payment_id,
             merchant_id=order.merchant_id,
+            merchant_name=order.merchant.name if getattr(order, "merchant", None) else f"店铺 #{order.merchant_id}",
+            merchant_logo_url=order.merchant.logo_url if getattr(order, "merchant", None) else None,
             status=order.status,
             total_amount_cent=order.total_amount_cent,
             pay_amount_cent=order.pay_amount_cent,
@@ -1490,9 +1546,23 @@ class OrderService:
             shipping_address=shipping_address,
             logistics_company=order.logistics_company,
             tracking_no=order.tracking_no,
+            created_at=order.created_at.isoformat() if order.created_at else None,
             shipped_at=order.shipped_at.isoformat() if order.shipped_at else None,
             received_at=order.received_at.isoformat() if order.received_at else None,
-            items=[OrderItemResponse.model_validate(item) for item in order.items],
+            items=[
+                OrderItemResponse(
+                    id=item.id,
+                    product_id=item.product_id,
+                    sku_id=item.sku_id,
+                    product_name=item.product_name,
+                    sku_name=item.sku_name,
+                    cover_url=self._order_item_cover_url(item),
+                    unit_price_cent=item.unit_price_cent,
+                    quantity=item.quantity,
+                    total_amount_cent=item.total_amount_cent,
+                )
+                for item in order.items
+            ],
         )
 
 

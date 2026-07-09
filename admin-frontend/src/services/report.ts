@@ -45,6 +45,9 @@ export type ReportOverview = {
   refund_status: ReportNameValue[]
   promotion_summary: ReportMetric[]
   community_summary: ReportMetric[]
+  member_summary?: ReportMetric[]
+  member_level_distribution?: ReportNameValue[]
+  points_summary?: ReportMetric[]
 }
 
 export function getPlatformReportOverview() {

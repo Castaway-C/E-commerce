@@ -315,7 +315,7 @@ export function MerchantCommunityPage() {
         </Col>
         <Col span={24} id="merchant-community">
           <Card
-            title="本店动态"
+            title="社区"
             extra={
               <Space wrap>
                 <Select

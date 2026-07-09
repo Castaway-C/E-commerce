@@ -5,12 +5,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.exceptions import AppException, ForbiddenException
-from app.models.product import Category, Merchant, MerchantFollow, Product, ProductFavorite, ProductImage, Sku, SkuStockLog
+from app.models.product import Category, HomeBanner, Merchant, MerchantFollow, Product, ProductFavorite, ProductImage, Sku, SkuStockLog
 from app.models.order import ProductReview
 from app.models.user import AdminUser
 from app.schemas.product import (
     CategoryCreateRequest,
     CategoryUpdateRequest,
+    HomeBannerCreateRequest,
+    HomeBannerUpdateRequest,
     MerchantCreateRequest,
     MerchantFollowItemResponse,
     MerchantFollowStatusResponse,
@@ -90,6 +92,65 @@ class ProductService:
         await db.commit()
         await db.refresh(category)
         return category
+
+    async def list_home_banners(self, db: AsyncSession, *, include_inactive: bool = False) -> list[HomeBanner]:
+        statement = select(HomeBanner).order_by(HomeBanner.sort_order, HomeBanner.id)
+        if not include_inactive:
+            statement = statement.where(HomeBanner.is_active.is_(True))
+        result = await db.execute(statement)
+        return list(result.scalars())
+
+    async def create_home_banner(self, db: AsyncSession, payload: HomeBannerCreateRequest) -> HomeBanner:
+        target_id, target_url = await self._normalize_home_banner_target(
+            db,
+            payload.target_type,
+            payload.target_id,
+            payload.target_url,
+        )
+        data = payload.model_dump()
+        data["target_id"] = target_id
+        data["target_url"] = target_url
+        banner = HomeBanner(**data)
+        db.add(banner)
+        await db.commit()
+        await db.refresh(banner)
+        return banner
+
+    async def update_home_banner(
+        self,
+        db: AsyncSession,
+        banner_id: int,
+        payload: HomeBannerUpdateRequest,
+    ) -> HomeBanner:
+        banner = await db.get(HomeBanner, banner_id)
+        if banner is None:
+            raise AppException(40004, "轮播图不存在", 404)
+        fields = payload.model_fields_set
+        next_target_type = payload.target_type if "target_type" in fields and payload.target_type is not None else banner.target_type
+        next_target_id = payload.target_id if "target_id" in fields else banner.target_id
+        next_target_url = payload.target_url if "target_url" in fields else banner.target_url
+        next_target_id, next_target_url = await self._normalize_home_banner_target(
+            db,
+            next_target_type,
+            next_target_id,
+            next_target_url,
+        )
+        for field in fields:
+            setattr(banner, field, getattr(payload, field))
+        banner.target_type = next_target_type
+        banner.target_id = next_target_id
+        banner.target_url = next_target_url
+        await db.commit()
+        await db.refresh(banner)
+        return banner
+
+    async def delete_home_banner(self, db: AsyncSession, banner_id: int) -> HomeBanner:
+        banner = await db.get(HomeBanner, banner_id)
+        if banner is None:
+            raise AppException(40004, "轮播图不存在", 404)
+        await db.delete(banner)
+        await db.commit()
+        return banner
 
     async def create_product(self, db: AsyncSession, payload: ProductCreateRequest) -> Product:
         merchant = await db.get(Merchant, payload.merchant_id)
@@ -730,6 +791,27 @@ class ProductService:
         if await self._category_depth(db, parent) >= 3:
             raise AppException(40005, "分类最多支持三级，不能继续添加子分类")
         return parent
+
+    async def _normalize_home_banner_target(
+        self,
+        db: AsyncSession,
+        target_type: str,
+        target_id: int | None,
+        target_url: str | None,
+    ) -> tuple[int | None, str | None]:
+        if target_type == "product":
+            if target_id is None:
+                raise AppException(40001, "跳转商品时必须填写商品 ID")
+            await self.get_product_detail(db, target_id, include_off_sale=True)
+            return target_id, None
+        elif target_type == "url":
+            if not target_url:
+                raise AppException(40001, "外部链接轮播图必须填写链接")
+            return None, target_url
+        elif target_type == "none":
+            return None, None
+        else:
+            raise AppException(40001, "轮播图跳转类型不正确")
 
     async def _category_subtree_depth(self, db: AsyncSession, category_id: int) -> int:
         result = await db.execute(

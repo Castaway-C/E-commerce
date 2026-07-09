@@ -30,7 +30,15 @@ export type Product = {
   merchant: { id: number; name: string }
   skus: Array<{ id: number; name: string; price_cent: number; market_price_cent?: number | null; stock: number }>
 }
-export type Order = { id: number; order_no: string; user_id: number; merchant_id: number; status: string; pay_amount_cent: number }
+export type Order = {
+  id: number
+  order_no: string
+  user_id: number
+  merchant_id: number
+  merchant_name?: string
+  status: string
+  pay_amount_cent: number
+}
 export type OrderDetail = Order & {
   payment_id: number
   total_amount_cent: number
@@ -118,8 +126,18 @@ export type Comment = {
   status: string
   created_at: string
 }
+export type MemberLevelRule = {
+  level: string
+  name: string
+  threshold_cent: number
+  benefits: string[]
+  sign_in_bonus_points: number
+  max_points_discount_percent?: number | null
+  points_multiplier: number
+  benefit_description?: string | null
+}
 export type MemberPointsConfig = {
-  level_rules: Array<{ level: string; name: string; threshold_cent: number; benefits: string[] }>
+  level_rules: MemberLevelRule[]
   sign_in_base_points: number
   sign_in_streak_increment: number
   sign_in_max_points: number

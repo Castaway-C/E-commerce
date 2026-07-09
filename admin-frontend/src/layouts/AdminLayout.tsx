@@ -7,6 +7,7 @@ const { Text } = Typography
 
 const menuItems = [
   { path: '/admin/dashboard', label: '数据概览' },
+  { path: '/admin/home-banners', label: '首页轮播' },
   { path: '/admin/merchant-review', label: '商家入驻审核' },
   { path: '/admin/category', label: '分类配置' },
   { path: '/admin/products', label: '商品监管' },

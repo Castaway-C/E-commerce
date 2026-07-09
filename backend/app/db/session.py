@@ -36,6 +36,7 @@ async def init_db() -> None:
             await _patch_sqlite_merchant_application_columns(conn)
             await _patch_sqlite_user_columns(conn)
             await _patch_sqlite_user_address_columns(conn)
+            await _patch_sqlite_home_banner_table(conn)
             await _seed_default_categories(conn)
 
 
@@ -48,6 +49,30 @@ async def _patch_sqlite_product_columns(conn) -> None:
     for column_name, column_type in columns.items():
         if column_name not in existing_columns:
             await conn.execute(text(f"ALTER TABLE product ADD COLUMN {column_name} {column_type}"))
+
+
+async def _patch_sqlite_home_banner_table(conn) -> None:
+    await conn.execute(
+        text(
+            """
+            CREATE TABLE IF NOT EXISTS home_banner (
+                id INTEGER NOT NULL PRIMARY KEY,
+                title VARCHAR(80) NOT NULL,
+                subtitle VARCHAR(160),
+                image_url VARCHAR(255) NOT NULL,
+                target_type VARCHAR(30) DEFAULT 'none' NOT NULL,
+                target_id INTEGER,
+                target_url VARCHAR(255),
+                sort_order INTEGER DEFAULT 0 NOT NULL,
+                is_active BOOLEAN DEFAULT 1 NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+    )
+    await conn.execute(text("CREATE INDEX IF NOT EXISTS ix_home_banner_id ON home_banner (id)"))
+    await conn.execute(text("CREATE INDEX IF NOT EXISTS ix_home_banner_is_active ON home_banner (is_active)"))
 
 
 async def _patch_sqlite_order_columns(conn) -> None:

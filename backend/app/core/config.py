@@ -47,6 +47,14 @@ class Settings(BaseSettings):
     alipay_notify_url: str | None = None
     alipay_subject_prefix: str = "一次买够订单"
     alipay_request_timeout_seconds: int = 30
+    ai_assistant_enabled: bool = True
+    ai_assistant_provider: str = "qwen"
+    ai_assistant_model: str = "qwen-flash"
+    ai_assistant_base_url: str = "https://ws-hnuof8rzherwpnjw.cn-beijing.maas.aliyuncs.com/compatible-mode/v1"
+    ai_assistant_api_key: str | None = None
+    dashscope_api_key: str | None = None
+    ai_assistant_request_timeout_seconds: int = 30
+    ai_assistant_enable_thinking: bool = True
 
 
 @lru_cache

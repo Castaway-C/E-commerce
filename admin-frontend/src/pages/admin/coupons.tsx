@@ -116,7 +116,19 @@ export function AdminCouponsPage() {
   }
 
   function addLevelRule() {
-    setLevelRules([...levelRules, { level: '', name: '', threshold_cent: 0, benefits: [] }])
+    setLevelRules([
+      ...levelRules,
+      {
+        level: '',
+        name: '',
+        threshold_cent: 0,
+        benefits: [],
+        sign_in_bonus_points: 0,
+        max_points_discount_percent: null,
+        points_multiplier: 1,
+        benefit_description: '',
+      },
+    ])
   }
 
   function removeLevelRule(index: number) {
@@ -204,11 +216,15 @@ export function AdminCouponsPage() {
                     size="small"
                     rowKey="level"
                     pagination={false}
+                    scroll={{ x: 820 }}
                     dataSource={memberPointsConfig?.level_rules ?? []}
                     columns={[
                       { title: '等级', dataIndex: 'name' },
                       { title: '标识', dataIndex: 'level' },
                       { title: '消费门槛', dataIndex: 'threshold_cent', render: (value) => `￥${yuan(value)}` },
+                      { title: '签到加成', dataIndex: 'sign_in_bonus_points', render: (value) => `+${value ?? 0} 分` },
+                      { title: '抵扣上限', dataIndex: 'max_points_discount_percent', render: (value) => (value === null || value === undefined ? '默认' : `${value}%`) },
+                      { title: '积分倍率', dataIndex: 'points_multiplier', render: (value) => `x${value ?? 1}` },
                       { title: '权益', dataIndex: 'benefits', render: (value: string[]) => value.join('、') || '-' },
                     ]}
                   />
@@ -254,6 +270,7 @@ export function AdminCouponsPage() {
                       size="small"
                       rowKey={(_, index) => String(index ?? 0)}
                       pagination={false}
+                      scroll={{ x: 1180 }}
                       dataSource={levelRules}
                       columns={[
                         {
@@ -288,6 +305,53 @@ export function AdminCouponsPage() {
                           ),
                         },
                         {
+                          title: '签到加成',
+                          dataIndex: 'sign_in_bonus_points',
+                          width: 100,
+                          render: (value: number, _: unknown, index: number) => (
+                            <InputNumber
+                              size="small"
+                              min={0}
+                              value={value}
+                              style={{ width: '100%' }}
+                              onChange={(v) => updateLevelRule(index, 'sign_in_bonus_points', Number(v ?? 0))}
+                            />
+                          ),
+                        },
+                        {
+                          title: '抵扣上限覆盖',
+                          dataIndex: 'max_points_discount_percent',
+                          width: 130,
+                          render: (value: number | null | undefined, _: unknown, index: number) => (
+                            <InputNumber
+                              size="small"
+                              min={0}
+                              max={100}
+                              placeholder="默认"
+                              value={value ?? undefined}
+                              addonAfter="%"
+                              style={{ width: '100%' }}
+                              onChange={(v) => updateLevelRule(index, 'max_points_discount_percent', v === null ? null : Number(v))}
+                            />
+                          ),
+                        },
+                        {
+                          title: '积分倍率',
+                          dataIndex: 'points_multiplier',
+                          width: 110,
+                          render: (value: number, _: unknown, index: number) => (
+                            <InputNumber
+                              size="small"
+                              min={0}
+                              max={10}
+                              precision={2}
+                              value={value ?? 1}
+                              style={{ width: '100%' }}
+                              onChange={(v) => updateLevelRule(index, 'points_multiplier', Number(v ?? 1))}
+                            />
+                          ),
+                        },
+                        {
                           title: '权益',
                           render: (_: unknown, __: unknown, index: number) => (
                             <Select
@@ -297,6 +361,19 @@ export function AdminCouponsPage() {
                               onChange={(v) => updateLevelRule(index, 'benefits', v)}
                               style={{ width: '100%' }}
                               placeholder="输入权益后回车"
+                            />
+                          ),
+                        },
+                        {
+                          title: '权益说明',
+                          dataIndex: 'benefit_description',
+                          width: 180,
+                          render: (value: string | null | undefined, _: unknown, index: number) => (
+                            <Input
+                              size="small"
+                              value={value ?? ''}
+                              placeholder="面向用户展示的权益说明"
+                              onChange={(e) => updateLevelRule(index, 'benefit_description', e.target.value)}
                             />
                           ),
                         },

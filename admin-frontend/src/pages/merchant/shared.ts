@@ -50,6 +50,7 @@ export type Order = {
   order_no: string
   user_id: number
   merchant_id: number
+  merchant_name?: string
   status: string
   pay_amount_cent: number
 }

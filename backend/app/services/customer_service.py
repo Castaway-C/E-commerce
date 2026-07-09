@@ -56,6 +56,7 @@ class CustomerServiceService:
             )
             db.add(conversation)
             await db.flush()
+            await self._create_auto_reply(db, conversation)
         if payload.initial_message and payload.initial_message.strip():
             await self._create_message(
                 db,
@@ -244,6 +245,23 @@ class CustomerServiceService:
         db.add(message)
         await db.flush()
         return message
+
+    async def _create_auto_reply(self, db: AsyncSession, conversation: CustomerServiceConversation) -> None:
+        if conversation.target_type == "platform":
+            content = "您好，我是“一次买够”平台的客服！请问有什么能帮到您的？"
+            sender_type = "platform"
+        else:
+            merchant = await db.get(Merchant, conversation.merchant_id) if conversation.merchant_id else None
+            merchant_name = merchant.name if merchant else "本店"
+            content = f"您好，我是“{merchant_name}”的客服！请问有什么能帮到您的？"
+            sender_type = "merchant"
+        await self._create_message(
+            db,
+            conversation,
+            sender_type=sender_type,
+            sender_id=0,
+            payload=CustomerServiceMessageCreateRequest(content=content),
+        )
 
     async def _resolve_user_merchant_id(
         self,

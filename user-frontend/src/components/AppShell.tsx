@@ -6,6 +6,7 @@ import { Avatar } from 'antd'
 import { authService, type UserProfile } from '../services/auth'
 import { USER_AUTH_CHANGED_EVENT } from '../services/http'
 import { absoluteAssetUrl } from '../utils/format'
+import { AiAssistantWidget } from './AiAssistantWidget'
 import mygoIcon from '../styles/MyGO_icon.svg'
 import logoMygo from '../styles/Logo_mygo.svg'
 
@@ -88,6 +89,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </nav>
       )}
       {children}
+      {!isAuthPage && <AiAssistantWidget />}
     </>
   )
 }

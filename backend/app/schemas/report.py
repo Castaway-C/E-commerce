@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class ReportTimeRange(BaseModel):
@@ -50,3 +50,6 @@ class ReportOverviewResponse(BaseModel):
     refund_status: list[ReportNameValue]
     promotion_summary: list[ReportMetric]
     community_summary: list[ReportMetric]
+    member_summary: list[ReportMetric] = Field(default_factory=list)
+    member_level_distribution: list[ReportNameValue] = Field(default_factory=list)
+    points_summary: list[ReportMetric] = Field(default_factory=list)

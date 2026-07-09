@@ -18,6 +18,9 @@
 |---|---|---|
 | sku_id | number | SKU ID |
 | product_id | number | 商品 ID |
+| merchant_id | number | 店铺 ID |
+| merchant_name | string | 店铺名称 |
+| merchant_logo_url | string/null | 店铺 Logo，用于购物车店铺分组头像 |
 | product_name | string | 商品名 |
 | sku_name | string | 规格名 |
 | price_cent | number | 单价，单位分 |
@@ -183,7 +186,7 @@
 | page | number | 否 | 页码 |
 | page_size | number | 否 | 每页数量 |
 
-前端约定：用户端订单区应提供状态筛选和分页。联调工作台默认每页展示少量最近订单，避免测试数据过多时影响使用；翻页通过 `page`、`page_size` 请求后端。
+前端约定：用户端订单页应提供状态筛选和分页，避免测试数据过多时影响使用；翻页通过 `page`、`page_size` 请求后端。
 
 ## GET `/orders/{id}`
 
@@ -197,6 +200,8 @@
 | order_no | string | 订单号 |
 | payment_id | number | 支付单 ID |
 | merchant_id | number | 店铺 ID |
+| merchant_name | string | 店铺名称，用于购物车、订单列表和订单详情展示 |
+| merchant_logo_url | string/null | 店铺 Logo，用于订单列表和订单详情展示 |
 | status | string | 订单状态 |
 | total_amount_cent | number | 商品总金额，单位分 |
 | pay_amount_cent | number | 实付金额，单位分 |
@@ -209,9 +214,24 @@
 | shipping_address | object/null | 下单时收货地址快照 |
 | logistics_company | string/null | 物流公司 |
 | tracking_no | string/null | 物流单号 |
+| created_at | string/null | 下单时间 |
 | shipped_at | string/null | 发货时间 |
 | received_at | string/null | 确认收货时间 |
 | items | array | 订单商品明细 |
+
+`items` 字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| id | number | 订单明细 ID，用于评价和售后申请 |
+| product_id | number | 商品 ID |
+| sku_id | number | SKU ID |
+| product_name | string | 下单时商品名称快照 |
+| sku_name | string | 下单时 SKU 名称快照 |
+| cover_url | string/null | 商品封面图；优先取商品封面，缺失时取商品图片列表第一张 |
+| unit_price_cent | number | 下单时单价，单位分 |
+| quantity | number | 购买数量 |
+| total_amount_cent | number | 明细金额，单位分 |
 
 `shipping_address` 字段：
 
@@ -452,6 +472,7 @@
 - 商家管理员只能发自己店铺订单。
 - 发货后订单状态变为 `shipping`，并记录 `shipped_at`。
 - 按实现设计书 6.2，本项目不实现真实物流轨迹查询；`logistics_company` 和 `tracking_no` 只作为发货记录展示，用户端只做确认收货。
+- 商家端前端提供常用快递公司下拉和模拟单号生成按钮，生成内容仍通过本接口保存。
 
 ## 管理端售后与评价管理接口
 

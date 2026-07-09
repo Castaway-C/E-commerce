@@ -63,6 +63,42 @@ class CategoryResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class HomeBannerCreateRequest(BaseModel):
+    title: str = Field(min_length=1, max_length=80)
+    subtitle: str | None = Field(default=None, max_length=160)
+    image_url: str = Field(min_length=1, max_length=255)
+    target_type: str = Field(default="none", pattern="^(none|product|url)$")
+    target_id: int | None = Field(default=None, ge=1)
+    target_url: str | None = Field(default=None, max_length=255)
+    sort_order: int = 0
+    is_active: bool = True
+
+
+class HomeBannerUpdateRequest(BaseModel):
+    title: str | None = Field(default=None, min_length=1, max_length=80)
+    subtitle: str | None = Field(default=None, max_length=160)
+    image_url: str | None = Field(default=None, min_length=1, max_length=255)
+    target_type: str | None = Field(default=None, pattern="^(none|product|url)$")
+    target_id: int | None = Field(default=None, ge=1)
+    target_url: str | None = Field(default=None, max_length=255)
+    sort_order: int | None = None
+    is_active: bool | None = None
+
+
+class HomeBannerResponse(BaseModel):
+    id: int
+    title: str
+    subtitle: str | None = None
+    image_url: str
+    target_type: str
+    target_id: int | None = None
+    target_url: str | None = None
+    sort_order: int
+    is_active: bool
+
+    model_config = {"from_attributes": True}
+
+
 class SkuCreateRequest(BaseModel):
     name: str = Field(min_length=1, max_length=80)
     price_cent: int = Field(ge=0)

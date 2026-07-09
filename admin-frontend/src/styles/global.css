@@ -637,6 +637,190 @@ pre {
   height: 320px;
 }
 
+.report-efficiency-row {
+  margin-top: var(--space-md);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--hairline-soft);
+}
+
+/* 客服工作台 */
+.admin-cs-card {
+  overflow: hidden;
+}
+
+.admin-cs-layout {
+  display: grid;
+  grid-template-columns: 340px minmax(0, 1fr);
+  gap: var(--space-lg);
+  min-height: 620px;
+}
+
+.admin-cs-sidebar,
+.admin-cs-chat {
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-lg);
+  background: var(--canvas);
+  overflow: hidden;
+}
+
+.admin-cs-list {
+  max-height: 620px;
+  overflow-y: auto;
+}
+
+.admin-cs-list .ant-list-item {
+  padding: var(--space-md) !important;
+  cursor: pointer;
+  border-bottom: 1px solid var(--hairline-soft) !important;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.admin-cs-list .ant-list-item:hover {
+  background: var(--surface-soft);
+}
+
+.admin-cs-list-item-active,
+.admin-cs-list-item-active:hover {
+  background: var(--surface-card) !important;
+  border-left: 3px solid var(--primary);
+}
+
+.admin-cs-list-content {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.admin-cs-list-top,
+.admin-cs-chat-header,
+.admin-cs-input {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+}
+
+.admin-cs-list-top .anticon {
+  color: var(--primary);
+}
+
+.admin-cs-time {
+  font-size: 12px !important;
+}
+
+.admin-cs-chat {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.admin-cs-empty {
+  display: grid;
+  flex: 1;
+  place-items: center;
+  padding: var(--space-xxl);
+}
+
+.admin-cs-chat-header {
+  min-height: 72px;
+  padding: var(--space-md);
+  border-bottom: 1px solid var(--hairline);
+  background: var(--surface-soft);
+}
+
+.admin-cs-chat-subtitle {
+  margin-top: var(--space-xs);
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.admin-cs-messages {
+  display: flex;
+  min-height: 420px;
+  max-height: 420px;
+  flex-direction: column;
+  gap: var(--space-sm);
+  overflow-y: auto;
+  padding: var(--space-md);
+  background: var(--surface-soft);
+}
+
+.admin-cs-message {
+  display: flex;
+  width: 100%;
+}
+
+.admin-cs-message-user {
+  justify-content: flex-start;
+}
+
+.admin-cs-message-self {
+  justify-content: flex-end;
+}
+
+.admin-cs-bubble {
+  max-width: 72%;
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--hairline-soft);
+  border-radius: var(--radius-lg);
+  background: var(--canvas);
+  color: var(--body);
+  line-height: 1.6;
+  word-break: break-word;
+}
+
+.admin-cs-message-self .admin-cs-bubble {
+  color: var(--on-primary);
+  border-color: var(--primary);
+  background: var(--primary);
+}
+
+.admin-cs-sender {
+  margin-bottom: 2px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.admin-cs-message-self .admin-cs-sender {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.admin-cs-bubble time {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted-soft);
+  font-size: 11px;
+  text-align: right;
+}
+
+.admin-cs-message-self .admin-cs-bubble time {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.admin-cs-input {
+  padding: var(--space-md);
+  border-top: 1px solid var(--hairline);
+  background: var(--canvas);
+  align-items: flex-end;
+}
+
+.admin-cs-input .ant-input {
+  flex: 1;
+}
+
+@media (max-width: 960px) {
+  .admin-cs-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-cs-list,
+  .admin-cs-messages {
+    max-height: 360px;
+  }
+}
+
 /* 可点击列表项 */
 .clickable-list-item {
   cursor: pointer;

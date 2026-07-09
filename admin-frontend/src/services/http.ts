@@ -1,4 +1,4 @@
-import axios from 'axios'
+import axios, { type AxiosError, type AxiosResponse, type InternalAxiosRequestConfig } from 'axios'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000/api/v1'
 type AdminSession = 'platform' | 'merchant'
@@ -15,10 +15,6 @@ type ApiResponse<T> = {
   message: string
   data: T
 }
-
-type AxiosError = axios.AxiosError
-type InternalAxiosRequestConfig = axios.InternalAxiosRequestConfig
-type AxiosResponse = axios.AxiosResponse
 
 type AdminRequestConfig = InternalAxiosRequestConfig & {
   _retry?: boolean

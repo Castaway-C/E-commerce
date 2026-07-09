@@ -42,6 +42,9 @@ from app.schemas.product import (
     CategoryCreateRequest,
     CategoryResponse,
     CategoryUpdateRequest,
+    HomeBannerCreateRequest,
+    HomeBannerResponse,
+    HomeBannerUpdateRequest,
     MerchantCreateRequest,
     MerchantResponse,
     MerchantUpdateRequest,
@@ -510,6 +513,74 @@ async def disable_category(
     ensure_platform_operator(current_admin)
     category = await product_service.disable_category(db, category_id)
     return success(CategoryResponse.model_validate(category))
+
+
+@router.get("/home-banners", response_model=ApiResponse[list[HomeBannerResponse]])
+async def admin_list_home_banners(
+    db: DbSession,
+    current_admin: AdminUser = Depends(get_current_admin),
+) -> ApiResponse[list[HomeBannerResponse]]:
+    ensure_platform_operator(current_admin)
+    banners = await product_service.list_home_banners(db, include_inactive=True)
+    return success([HomeBannerResponse.model_validate(banner) for banner in banners])
+
+
+@router.post("/home-banners", response_model=ApiResponse[HomeBannerResponse])
+async def admin_create_home_banner(
+    payload: HomeBannerCreateRequest,
+    db: DbSession,
+    current_admin: AdminUser = Depends(get_current_admin),
+) -> ApiResponse[HomeBannerResponse]:
+    ensure_platform_operator(current_admin)
+    banner = await product_service.create_home_banner(db, payload)
+    await admin_log_service.record(
+        db,
+        admin=current_admin,
+        action="home_banner.create",
+        resource_type="home_banner",
+        resource_id=banner.id,
+        description=f"创建首页轮播图 {banner.title}",
+    )
+    return success(HomeBannerResponse.model_validate(banner))
+
+
+@router.put("/home-banners/{banner_id}", response_model=ApiResponse[HomeBannerResponse])
+async def admin_update_home_banner(
+    banner_id: int,
+    payload: HomeBannerUpdateRequest,
+    db: DbSession,
+    current_admin: AdminUser = Depends(get_current_admin),
+) -> ApiResponse[HomeBannerResponse]:
+    ensure_platform_operator(current_admin)
+    banner = await product_service.update_home_banner(db, banner_id, payload)
+    await admin_log_service.record(
+        db,
+        admin=current_admin,
+        action="home_banner.update",
+        resource_type="home_banner",
+        resource_id=banner.id,
+        description=f"更新首页轮播图 {banner.title}",
+    )
+    return success(HomeBannerResponse.model_validate(banner))
+
+
+@router.delete("/home-banners/{banner_id}", response_model=ApiResponse[HomeBannerResponse])
+async def admin_delete_home_banner(
+    banner_id: int,
+    db: DbSession,
+    current_admin: AdminUser = Depends(get_current_admin),
+) -> ApiResponse[HomeBannerResponse]:
+    ensure_platform_operator(current_admin)
+    banner = await product_service.delete_home_banner(db, banner_id)
+    await admin_log_service.record(
+        db,
+        admin=current_admin,
+        action="home_banner.delete",
+        resource_type="home_banner",
+        resource_id=banner.id,
+        description=f"删除首页轮播图 {banner.title}",
+    )
+    return success(HomeBannerResponse.model_validate(banner))
 
 
 @router.post("/products", response_model=ApiResponse[ProductDetailResponse])

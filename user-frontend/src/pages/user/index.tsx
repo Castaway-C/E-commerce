@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import {
   Avatar,
   Button,
@@ -54,6 +54,7 @@ import { uploadService } from '../../services/upload'
 import { getApiErrorMessage } from '../../services/http'
 import { absoluteAssetUrl, pickErrorMessage, statusText, yuan } from '../../utils/format'
 import { REGION_DATA } from '../../utils/region-data'
+import { CustomerServicePanel } from '../customer-service'
 
 const { Text, Paragraph } = Typography
 
@@ -94,7 +95,7 @@ type AddressFormValues = {
   is_default?: boolean
 }
 
-type SectionTab = 'points' | 'coupons' | 'favorites' | 'follows' | 'addresses' | 'favoritePosts'
+type SectionTab = 'points' | 'coupons' | 'favorites' | 'follows' | 'addresses' | 'favoritePosts' | 'customerService'
 
 function buildRegionText(address: Address) {
   return [address.province, address.city, address.district ?? '', address.street ?? '']
@@ -103,7 +104,6 @@ function buildRegionText(address: Address) {
 }
 
 export function UserCenterPage() {
-  const navigate = useNavigate()
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [profileNickname, setProfileNickname] = useState('')
   const [profileGender, setProfileGender] = useState<string>('')
@@ -487,6 +487,7 @@ export function UserCenterPage() {
     { key: 'favorites', label: `商品收藏 (${favoriteProducts.length})`, icon: <HeartOutlined /> },
     { key: 'favoritePosts', label: `收藏帖子 (${favoritePosts.length})`, icon: <StarOutlined /> },
     { key: 'follows', label: `关注店铺 (${followedMerchants.length})`, icon: <ShopOutlined /> },
+    { key: 'customerService', label: '客服消息', icon: <MessageOutlined /> },
   ]
 
   return (
@@ -1013,17 +1014,15 @@ export function UserCenterPage() {
               </Spin>
             </Card>
           )}
+
+          {activeTab === 'customerService' && (
+            <Card className="uc-card uc-customer-service-card" title={<span className="uc-card-title">客服消息</span>}>
+              <CustomerServicePanel embedded />
+            </Card>
+          )}
           </div>
         </div>
       </Spin>
-
-      <button
-        className="uc-fab-cs"
-        onClick={() => navigate('/customer-service')}
-        title="联系客服"
-      >
-        <MessageOutlined />
-      </button>
 
       {/* ── Edit Profile Modal ── */}
       <Modal
