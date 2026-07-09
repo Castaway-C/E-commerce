@@ -6,6 +6,7 @@ import {
   Image,
   Input,
   InputNumber,
+  Popconfirm,
   Row,
   Select,
   Space,
@@ -261,6 +262,14 @@ export function MerchantProductsPage() {
     await loadProducts()
   }
 
+  async function deleteProduct(productId: number) {
+    await run('删除商品', () =>
+      http.delete(`/admin/products/${productId}`, { headers: { 'X-Admin-Session': SESSION } }),
+    )
+    if (selectedProduct?.id === productId) setSelectedProduct(null)
+    await loadProducts()
+  }
+
   async function uploadImage(file: File) {
     const data = await run<{ url: string }>('上传商品图片', () => uploadService.uploadImage(file, SESSION))
     if (data?.url) setImageUrls((items) => [...items, data.url])
@@ -360,6 +369,16 @@ export function MerchantProductsPage() {
           <Button onClick={() => selectProduct(record)}>编辑</Button>
           <Button onClick={() => productStatus(record.id, 'publish')}>上架</Button>
           <Button danger onClick={() => productStatus(record.id, 'unpublish')}>下架</Button>
+          <Popconfirm
+            title="删除商品？"
+            description="删除后商品将从本店商品列表和用户端隐藏，历史订单仍保留。"
+            okText="删除"
+            cancelText="取消"
+            okButtonProps={{ danger: true }}
+            onConfirm={() => void deleteProduct(record.id)}
+          >
+            <Button danger>删除</Button>
+          </Popconfirm>
         </Space>
       ),
     },
@@ -510,7 +529,7 @@ export function MerchantProductsPage() {
                         <Button type="primary" htmlType="submit">保存 SKU</Button>
                       </Form>
                     ))}
-                    <Form layout="inline" onFinish={addSku} initialValues={{ name: '新规格', price_yuan: 19.9, stock: 10 }}>
+                    <Form layout="inline" onFinish={addSku} initialValues={{ name: '新规格', price_yuan: 19.9, stock: 1000 }}>
                       <Form.Item label="新增 SKU" name="name" rules={[{ required: true }]}>
                         <Input style={{ width: 140 }} />
                       </Form.Item>
@@ -533,7 +552,7 @@ export function MerchantProductsPage() {
         </Col>
         <Col span={24} id="merchant-create-product">
           <Card title="上传商品">
-            <Form layout="vertical" onFinish={createProduct} initialValues={{ sku_name: '默认规格', price_yuan: 19.9, stock: 20 }}>
+            <Form layout="vertical" onFinish={createProduct} initialValues={{ sku_name: '默认规格', price_yuan: 19.9, stock: 1000 }}>
               <Row gutter={16}>
                 <Col span={8}>
                   <Form.Item label="分类" name="category_id">

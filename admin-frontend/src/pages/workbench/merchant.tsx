@@ -1035,7 +1035,7 @@ export function MerchantWorkbenchPage() {
         </Col>
         <Col span={24} id="merchant-create-product">
           <Card title="上传商品">
-            <Form layout="vertical" onFinish={createProduct} initialValues={{ sku_name: '默认规格', price_yuan: 19.9, stock: 20 }}>
+            <Form layout="vertical" onFinish={createProduct} initialValues={{ sku_name: '默认规格', price_yuan: 19.9, stock: 1000 }}>
               <Form.Item label="分类" name="category_id">
                 <Select
                   allowClear
@@ -1160,7 +1160,7 @@ export function MerchantWorkbenchPage() {
                         <Button type="primary" htmlType="submit">保存 SKU</Button>
                       </Form>
                     ))}
-                    <Form layout="inline" onFinish={addSku} initialValues={{ name: '新规格', price_yuan: 19.9, stock: 10 }}>
+                    <Form layout="inline" onFinish={addSku} initialValues={{ name: '新规格', price_yuan: 19.9, stock: 1000 }}>
                       <Form.Item label="新增 SKU" name="name" rules={[{ required: true }]}><Input style={{ width: 140 }} /></Form.Item>
                       <Form.Item label="价格（元）" name="price_yuan" rules={[{ required: true }]}><InputNumber min={0} precision={2} /></Form.Item>
                       <Form.Item label="划线价（元）" name="market_price_yuan"><InputNumber min={0} precision={2} /></Form.Item>

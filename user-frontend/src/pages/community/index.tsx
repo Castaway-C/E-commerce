@@ -425,13 +425,13 @@ export function CommunityPage() {
                     <Text strong ellipsis style={{ maxWidth: compact ? 135 : 260 }}>
                       {product.name}
                     </Text>
-                    <Text type="secondary">商品 #{product.id} / {product.merchant_name}</Text>
+                    <Text type="secondary">{product.merchant_name}</Text>
                     <Text className="community-product-price">￥{yuan(product.price_cent)}</Text>
                   </Space>
                 </Space>
               ) : (
                 <Space direction="vertical" size={2}>
-                  <Text strong>商品 #{productId}</Text>
+                  <Text strong>商品 {productId}</Text>
                   <Text type="secondary">正在加载商品信息</Text>
                 </Space>
               )}
@@ -836,7 +836,7 @@ export function CommunityPage() {
                           togglePostProduct(product, false)
                         }}
                       >
-                        #{product.id} {product.name}
+                        {product.id} {product.name}
                       </Tag>
                     ))}
                   </div>
@@ -868,7 +868,7 @@ export function CommunityPage() {
                         />
                         <span className="comm-product-choice-info">
                           <Text strong ellipsis>{product.name}</Text>
-                          <Text type="secondary" ellipsis>#{product.id} / {product.merchant_name}</Text>
+                          <Text type="secondary" ellipsis>{product.merchant_name}</Text>
                           <Text className="community-product-price">￥{yuan(product.price_cent)}</Text>
                         </span>
                       </button>
@@ -932,7 +932,7 @@ export function CommunityPage() {
               </Avatar>
               <div className="comm-user-info">
                 <Title level={4} style={{ margin: 0 }}>{selectedCommunityUser.user.nickname}</Title>
-                <Text type="secondary">社区用户 #{selectedCommunityUser.user.id}</Text>
+                <Text type="secondary">社区用户 {selectedCommunityUser.user.id}</Text>
               </div>
             </div>
             <div className="comm-user-stats">

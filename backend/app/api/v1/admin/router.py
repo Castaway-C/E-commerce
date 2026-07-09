@@ -755,6 +755,25 @@ async def unpublish_product(
     return success(await product_service.to_detail_response(db, product))
 
 
+@router.delete("/products/{product_id}", response_model=ApiResponse[ProductDetailResponse])
+async def delete_product(
+    product_id: int,
+    db: DbSession,
+    current_admin: AdminUser = Depends(get_current_admin),
+) -> ApiResponse[ProductDetailResponse]:
+    product = await product_service.delete_product_for_admin(db, current_admin, product_id)
+    await admin_log_service.record(
+        db,
+        current_admin,
+        action="product.delete",
+        resource_type="product",
+        resource_id=product_id,
+        description=f"删除商品：{product.name}",
+    )
+    await db.commit()
+    return success(await product_service.to_detail_response(db, product))
+
+
 @router.post("/products/batch-publish", response_model=ApiResponse[list[ProductDetailResponse]])
 async def batch_publish_products(
     payload: ProductBatchRequest,

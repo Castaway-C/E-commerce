@@ -307,7 +307,7 @@ export function OrderPage() {
                           {(order.merchant_name || '店铺')[0]}
                         </Avatar>
                         <div className="oc-merchant-info">
-                          <Text strong>{order.merchant_name || `店铺 #${order.merchant_id}`}</Text>
+                          <Text strong>{order.merchant_name || '未知商家'}</Text>
                           <Text type="secondary" className="oc-order-no">{order.order_no}</Text>
                         </div>
                       </div>
@@ -449,7 +449,7 @@ export function OrderPage() {
                     onChange={(value) => setSelectedReviewOrderItemId(value as number)}
                     options={selectedOrder.items.map((item) => ({
                       value: item.id,
-                      label: `#${item.id} ${item.product_name} x${item.quantity}`,
+                      label: `${item.id} ${item.product_name} x${item.quantity}`,
                     }))}
                   />
                 </div>
@@ -507,7 +507,7 @@ export function OrderPage() {
                     onChange={(value) => setSelectedRefundOrderItemId(value as number)}
                     options={selectedOrder.items.map((item) => ({
                       value: item.id,
-                      label: `#${item.id} ${item.product_name} x${item.quantity}`,
+                      label: `${item.id} ${item.product_name} x${item.quantity}`,
                     }))}
                   />
                 </div>

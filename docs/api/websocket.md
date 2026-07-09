@@ -149,5 +149,5 @@
 - 模型配置项：`AI_ASSISTANT_MODEL=qwen-flash`、`AI_ASSISTANT_BASE_URL`、`DASHSCOPE_API_KEY` 或 `AI_ASSISTANT_API_KEY`、`AI_ASSISTANT_ENABLE_THINKING`。
 - `AI_ASSISTANT_API_KEY` 优先级高于 `DASHSCOPE_API_KEY`；两者均为空时返回 `provider=preset` 的兜底回复。
 - AI 助手只解释商城功能、购物流程、优惠规则、售后客服入口和社区种草规则。
-- AI 不直接修改订单、支付、退款、库存、积分、优惠券、商品上下架等关键业务状态。
-- 模型 API Key 只能放 `.env`，不得提交仓库。
+- AI 助手当前承担咨询和解释能力，订单、支付、退款、库存、积分、优惠券、商品上下架等关键业务状态仍由原业务接口处理。
+- 模型 API Key 放在本地 `.env`，不进入仓库。

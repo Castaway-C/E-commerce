@@ -122,6 +122,12 @@ html {
   border-bottom: 1px solid var(--hairline);
 }
 
+@font-face {
+  font-family: 'WenCangShuFang';
+  src: url('../fonts/WenCangShuFang.ttf') format('truetype');
+  font-display: swap;
+}
+
 .brand-link {
   display: flex;
   align-items: center;
@@ -130,25 +136,19 @@ html {
   text-decoration: none;
 }
 
-.brand-mark-box {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--s-xxs);
-  background: var(--surface-card);
-  border-radius: var(--r-md);
-}
-
 .brand-mark {
-  width: 32px;
-  height: 32px;
-  object-fit: contain;
-}
-
-.brand-logo {
-  height: 22px;
+  height: 36px;
   width: auto;
   object-fit: contain;
+}
+
+.brand-name {
+  font-family: 'WenCangShuFang', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--ink);
+  line-height: 1;
 }
 
 .nav-links {
@@ -1202,7 +1202,8 @@ pre {
 
 .home-banner-slide {
   position: relative;
-  height: 320px;
+  aspect-ratio: 16 / 5;
+  height: auto;
   overflow: hidden;
   background: var(--surface-dark);
 }
@@ -1218,6 +1219,7 @@ pre {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  animation: kenBurns 20s ease-in-out infinite;
 }
 
 .home-banner-fallback {
@@ -1486,12 +1488,13 @@ pre {
   border-radius: var(--r-lg) !important;
   border: 1px solid var(--hairline) !important;
   background: var(--canvas);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.2s ease, box-shadow 0.3s ease !important;
 }
 
 .product-ec-card:hover {
+  transform: translateY(-6px);
   border-color: var(--primary) !important;
-  box-shadow: var(--shadow-hover);
+  box-shadow: 0 14px 30px rgba(20, 20, 19, 0.12), 0 3px 10px rgba(204, 120, 92, 0.1);
 }
 
 .product-ec-card .ant-card-body {
@@ -1501,6 +1504,7 @@ pre {
 /* ── Card Cover ── */
 
 .pec-cover {
+  position: relative;
   height: 200px;
   overflow: hidden;
   background: var(--surface-card);
@@ -1522,7 +1526,7 @@ pre {
 }
 
 .product-ec-card:hover .pec-cover .ant-image-img {
-  transform: scale(1.04);
+  transform: scale(1.08);
 }
 
 .pec-cover-placeholder {
@@ -1657,6 +1661,469 @@ pre {
 
 .product-page .ant-empty-description {
   color: var(--muted-soft);
+}
+
+/* ============================================================
+   首页动效编排 — Entrance & Micro-interactions
+   克制、编辑感、暖色调；遵循 prefers-reduced-motion
+   ============================================================ */
+
+/* ── 关键帧 ── */
+@keyframes homeEnterUp {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes homeEnterFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes kenBurns {
+  0% {
+    transform: scale(1) translate(0, 0);
+  }
+  50% {
+    transform: scale(1.08) translate(-1.2%, -0.8%);
+  }
+  100% {
+    transform: scale(1) translate(0, 0);
+  }
+}
+
+@keyframes bannerTextIn {
+  from {
+    opacity: 0;
+    transform: translateX(-18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes homeShimmer {
+  0% {
+    background-position: -480px 0;
+  }
+  100% {
+    background-position: 480px 0;
+  }
+}
+
+/* ── 首屏依次入场（scoped to .product-page） ── */
+.product-page .product-header {
+  animation: homeEnterUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.product-page .home-banner-section {
+  animation: homeEnterUp 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.1s both;
+}
+
+.product-page .product-filter-bar {
+  animation: homeEnterUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.22s both;
+}
+
+.product-page .product-section {
+  animation: homeEnterFade 0.5s ease 0.3s both;
+}
+
+.product-page .product-card-link {
+  animation: homeEnterUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  /* animation-delay 由内联 style 按 index 交错设置 */
+}
+
+.product-page .product-pagination {
+  animation: homeEnterFade 0.4s ease both;
+}
+
+/* ── Banner 文案入场（不影响父级 translateY 居中） ── */
+.product-page .home-banner-title {
+  animation: bannerTextIn 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.25s both;
+}
+
+.product-page .home-banner-subtitle {
+  animation: bannerTextIn 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.38s both;
+}
+
+/* ── 商品卡片封面 hover 遮罩 + "查看详情" ── */
+.pec-cover::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+  background: linear-gradient(180deg, transparent 45%, rgba(20, 20, 19, 0.58));
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.product-ec-card:hover .pec-cover::after {
+  opacity: 1;
+}
+
+.pec-cover-view {
+  position: absolute;
+  left: 50%;
+  bottom: var(--s-sm);
+  z-index: 2;
+  transform: translate(-50%, 10px);
+  opacity: 0;
+  color: var(--on-dark);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  pointer-events: none;
+  transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.product-ec-card:hover .pec-cover-view {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+/* ── 价格 hover 强调 ── */
+.pec-price {
+  transition: color 0.2s ease;
+}
+
+.product-ec-card:hover .pec-price {
+  color: var(--primary-active);
+}
+
+/* ── 搜索框聚焦光晕 ── */
+.product-search-bar.ant-input-affix-wrapper-focused,
+.product-search-bar.ant-input-affix-wrapper:focus-within {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 4px rgba(204, 120, 92, 0.12) !important;
+}
+
+/* ── 筛选 chip 激活态微光 ── */
+.filter-chip.ant-btn-primary {
+  box-shadow: 0 2px 8px rgba(204, 120, 92, 0.24);
+}
+
+.filter-chip {
+  transition: transform 0.15s ease, border-color 0.15s ease, color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease !important;
+}
+
+.filter-chip.ant-btn-default:hover {
+  transform: translateY(-1px);
+}
+
+/* ── 排序选择器 hover 微抬 ── */
+.filter-sort-select .ant-select-selector {
+  transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+}
+
+.filter-sort-select.ant-select-focused .ant-select-selector {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 3px rgba(204, 120, 92, 0.1) !important;
+}
+
+/* ── Banner 切换按钮 hover 微抬 ── */
+.home-banner-nav.ant-btn {
+  transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+}
+
+.home-banner-nav.ant-btn:hover {
+  transform: translateY(-50%) scale(1.08);
+}
+
+/* ── 加载态骨架微光（增强 antd Skeleton） ── */
+.product-page .ant-skeleton-active .ant-skeleton-title,
+.product-page .ant-skeleton-active .ant-skeleton-paragraph > li {
+  background: linear-gradient(
+    90deg,
+    var(--surface-card) 25%,
+    var(--surface-soft) 37%,
+    var(--surface-card) 63%
+  );
+  background-size: 480px 100%;
+  animation: homeShimmer 1.4s ease-in-out infinite;
+}
+
+/* ============================================================
+   全站通用动效 — 复用首页 keyframes，覆盖所有页面
+   纯 CSS 复用，零 TSX 改动；列表交错用 :nth-child
+   ============================================================ */
+
+/* ── A. 全站 header 入场（复用第 245 行的 8 类分组） ── */
+.shop-header,
+.product-header,
+.gb-header,
+.order-header,
+.comm-header,
+.cart-header,
+.checkout-header,
+.cs-header {
+  animation: homeEnterUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* ── B. 无 header 页面的根容器/英雄区入场 ── */
+.detail-page .detail-breadcrumb,
+.order-detail-page .order-detail-topbar,
+.uc-page .uc-hero,
+.addr-page .addr-header,
+.shop-page .shop-hero,
+.cs-page .cs-main-layout,
+.auth-page .auth-brand,
+.auth-page .auth-form-side,
+.page-shell > h2 {
+  animation: homeEnterUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.auth-page .auth-form-side {
+  animation-delay: 0.12s;
+}
+
+/* ── C. 内容区/列表区淡入 ── */
+.detail-page .detail-hero,
+.comm-page .comm-grid-section,
+.gb-page .gb-section,
+.order-page .order-list-section,
+.cart-page .cart-list,
+.checkout-page .checkout-card,
+.uc-page .uc-content,
+.addr-page .addr-list-section,
+.shop-page .shop-product-section,
+.cs-page .cs-sidebar,
+.page-shell > .ant-row {
+  animation: homeEnterFade 0.5s ease 0.18s both;
+}
+
+/* ── D. 卡片/列表项 :nth-child 交错入场（核心复用，零 TSX） ── */
+.product-grid > *,
+.gb-activity-grid > *,
+.order-cards > *,
+.addr-cards > *,
+.comm-masonry > *,
+.shop-product-grid > *,
+.cart-list > * {
+  animation: homeEnterUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.product-grid > *:nth-child(1),
+.gb-activity-grid > *:nth-child(1),
+.order-cards > *:nth-child(1),
+.addr-cards > *:nth-child(1),
+.comm-masonry > *:nth-child(1),
+.shop-product-grid > *:nth-child(1),
+.cart-list > *:nth-child(1) {
+  animation-delay: 0.24s;
+}
+
+.product-grid > *:nth-child(2),
+.gb-activity-grid > *:nth-child(2),
+.order-cards > *:nth-child(2),
+.addr-cards > *:nth-child(2),
+.comm-masonry > *:nth-child(2),
+.shop-product-grid > *:nth-child(2),
+.cart-list > *:nth-child(2) {
+  animation-delay: 0.28s;
+}
+
+.product-grid > *:nth-child(3),
+.gb-activity-grid > *:nth-child(3),
+.order-cards > *:nth-child(3),
+.addr-cards > *:nth-child(3),
+.comm-masonry > *:nth-child(3),
+.shop-product-grid > *:nth-child(3),
+.cart-list > *:nth-child(3) {
+  animation-delay: 0.32s;
+}
+
+.product-grid > *:nth-child(4),
+.gb-activity-grid > *:nth-child(4),
+.order-cards > *:nth-child(4),
+.addr-cards > *:nth-child(4),
+.comm-masonry > *:nth-child(4),
+.shop-product-grid > *:nth-child(4),
+.cart-list > *:nth-child(4) {
+  animation-delay: 0.36s;
+}
+
+.product-grid > *:nth-child(5),
+.gb-activity-grid > *:nth-child(5),
+.order-cards > *:nth-child(5),
+.addr-cards > *:nth-child(5),
+.comm-masonry > *:nth-child(5),
+.shop-product-grid > *:nth-child(5),
+.cart-list > *:nth-child(5) {
+  animation-delay: 0.4s;
+}
+
+.product-grid > *:nth-child(6),
+.gb-activity-grid > *:nth-child(6),
+.order-cards > *:nth-child(6),
+.addr-cards > *:nth-child(6),
+.comm-masonry > *:nth-child(6),
+.shop-product-grid > *:nth-child(6),
+.cart-list > *:nth-child(6) {
+  animation-delay: 0.44s;
+}
+
+.product-grid > *:nth-child(7),
+.gb-activity-grid > *:nth-child(7),
+.order-cards > *:nth-child(7),
+.addr-cards > *:nth-child(7),
+.comm-masonry > *:nth-child(7),
+.shop-product-grid > *:nth-child(7),
+.cart-list > *:nth-child(7) {
+  animation-delay: 0.48s;
+}
+
+.product-grid > *:nth-child(8),
+.gb-activity-grid > *:nth-child(8),
+.order-cards > *:nth-child(8),
+.addr-cards > *:nth-child(8),
+.comm-masonry > *:nth-child(8),
+.shop-product-grid > *:nth-child(8),
+.cart-list > *:nth-child(8) {
+  animation-delay: 0.52s;
+}
+
+.product-grid > *:nth-child(n+9),
+.gb-activity-grid > *:nth-child(n+9),
+.order-cards > *:nth-child(n+9),
+.addr-cards > *:nth-child(n+9),
+.comm-masonry > *:nth-child(n+9),
+.shop-product-grid > *:nth-child(n+9),
+.cart-list > *:nth-child(n+9) {
+  animation-delay: 0.56s;
+}
+
+/* ── E. 统一卡片 hover lift（弹性回弹，比首页 -6px 稍轻用 -4px） ── */
+.order-card,
+.gb-activity-card,
+.comm-card,
+.checkout-card,
+.addr-card,
+.shop-product-card {
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.2s ease, box-shadow 0.3s ease;
+}
+
+.order-card:hover,
+.gb-activity-card:hover,
+.comm-card:hover,
+.checkout-card:hover,
+.addr-card:hover,
+.shop-product-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--primary);
+  box-shadow: 0 12px 26px rgba(20, 20, 19, 0.1), 0 2px 8px rgba(204, 120, 92, 0.08);
+}
+
+/* ── F. 全站主按钮 hover 微抬 ── */
+.ant-btn-primary:not(:disabled):hover {
+  transform: translateY(-1px);
+  transition: transform 0.15s ease;
+}
+
+/* ── G. 全局骨架屏微光（解除 .product-page 限制） ── */
+.ant-skeleton-active .ant-skeleton-title,
+.ant-skeleton-active .ant-skeleton-paragraph > li {
+  background: linear-gradient(90deg, var(--surface-card) 25%, var(--surface-soft) 37%, var(--surface-card) 63%);
+  background-size: 480px 100%;
+  animation: homeShimmer 1.4s ease-in-out infinite;
+}
+
+/* ── 无障碍：尊重「减少动态」偏好（全局版） ── */
+@media (prefers-reduced-motion: reduce) {
+  .shop-header,
+  .product-header,
+  .gb-header,
+  .order-header,
+  .comm-header,
+  .cart-header,
+  .checkout-header,
+  .cs-header,
+  .detail-page .detail-breadcrumb,
+  .order-detail-page .order-detail-topbar,
+  .uc-page .uc-hero,
+  .addr-page .addr-header,
+  .shop-page .shop-hero,
+  .cs-page .cs-main-layout,
+  .auth-page .auth-brand,
+  .auth-page .auth-form-side,
+  .page-shell > h2,
+  .detail-page .detail-hero,
+  .comm-page .comm-grid-section,
+  .gb-page .gb-section,
+  .order-page .order-list-section,
+  .cart-page .cart-list,
+  .checkout-page .checkout-card,
+  .uc-page .uc-content,
+  .addr-page .addr-list-section,
+  .shop-page .shop-product-section,
+  .cs-page .cs-sidebar,
+  .page-shell > .ant-row,
+  .product-grid > *,
+  .gb-activity-grid > *,
+  .order-cards > *,
+  .addr-cards > *,
+  .comm-masonry > *,
+  .shop-product-grid > *,
+  .cart-list > *,
+  .product-page .product-header,
+  .product-page .home-banner-section,
+  .product-page .product-filter-bar,
+  .product-page .product-section,
+  .product-page .product-card-link,
+  .product-page .product-pagination,
+  .product-page .home-banner-title,
+  .product-page .home-banner-subtitle,
+  .home-banner-image,
+  .product-ec-card,
+  .order-card,
+  .gb-activity-card,
+  .comm-card,
+  .checkout-card,
+  .addr-card,
+  .shop-product-card,
+  .pec-cover .ant-image-img,
+  .pec-cover::after,
+  .pec-cover-view,
+  .pec-price,
+  .filter-chip,
+  .home-banner-nav.ant-btn,
+  .ant-skeleton-active .ant-skeleton-title,
+  .ant-skeleton-active .ant-skeleton-paragraph > li,
+  .ant-btn-primary:not(:disabled):hover {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .product-ec-card:hover,
+  .order-card:hover,
+  .gb-activity-card:hover,
+  .comm-card:hover,
+  .checkout-card:hover,
+  .addr-card:hover,
+  .shop-product-card:hover {
+    transform: none;
+  }
+
+  .product-ec-card:hover .pec-cover .ant-image-img,
+  .comm-card:hover .comm-card-image img {
+    transform: none;
+  }
+
+  .filter-chip.ant-btn-default:hover,
+  .ant-btn-primary:not(:disabled):hover {
+    transform: none;
+  }
+
+  .home-banner-nav.ant-btn:hover {
+    transform: translateY(-50%);
+  }
 }
 
 @media (max-width: 900px) {
@@ -2338,18 +2805,6 @@ pre {
   padding: 0 var(--s-lg) var(--s-xxl);
 }
 
-.gb-notice {
-  margin-bottom: var(--s-lg);
-  padding: var(--s-sm) var(--s-md);
-  background: var(--canvas);
-  border: 1px solid var(--hairline);
-  border-left: 3px solid var(--primary);
-  border-radius: var(--r-md);
-  font-size: 13px;
-  line-height: 1.6;
-  color: var(--body);
-}
-
 .gb-section {
   margin-bottom: var(--s-lg);
 }
@@ -2609,11 +3064,6 @@ pre {
 @media (max-width: 600px) {
   .gb-page {
     padding: 0 var(--s-md) var(--s-xxl);
-  }
-
-  .gb-notice {
-    padding: var(--s-sm);
-    font-size: 12px;
   }
 
   .gb-activity-card {

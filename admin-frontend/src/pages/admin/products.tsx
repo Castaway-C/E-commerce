@@ -5,6 +5,7 @@ import {
   Form,
   Input,
   InputNumber,
+  Popconfirm,
   Row,
   Select,
   Space,
@@ -121,6 +122,13 @@ export function AdminProductsPage() {
     await loadProducts()
   }
 
+  async function deleteProduct(id: number) {
+    await run('删除商品', () =>
+      http.delete(`/admin/products/${id}`, { headers: { 'X-Admin-Session': SESSION } }),
+    )
+    await loadProducts()
+  }
+
   useEffect(() => {
     void loadCategories()
     void loadProducts()
@@ -138,7 +146,25 @@ export function AdminProductsPage() {
         </Tag>
       )),
     },
-    { title: '管理', render: (_, row) => <Space><Button onClick={() => productStatus(row.id, 'publish')}>上架</Button><Button danger onClick={() => productStatus(row.id, 'unpublish')}>下架</Button></Space> },
+    {
+      title: '管理',
+      render: (_, row) => (
+        <Space wrap>
+          <Button onClick={() => productStatus(row.id, 'publish')}>上架</Button>
+          <Button onClick={() => productStatus(row.id, 'unpublish')}>下架</Button>
+          <Popconfirm
+            title="删除商品？"
+            description="删除后商品将从管理列表和用户端隐藏，历史订单仍保留。"
+            okText="删除"
+            cancelText="取消"
+            okButtonProps={{ danger: true }}
+            onConfirm={() => void deleteProduct(row.id)}
+          >
+            <Button danger>删除</Button>
+          </Popconfirm>
+        </Space>
+      ),
+    },
   ]
 
   return (

@@ -196,7 +196,7 @@ export function CheckoutPage() {
       if (groupBuyMode.kind === 'start') {
         matchedActivity = allActivities.find((item) => item.id === groupBuyMode.activityId) ?? null
         if (!matchedActivity) {
-          setMessage(`未找到拼团活动 #${groupBuyMode.activityId}`)
+          setMessage(`未找到拼团活动 ${groupBuyMode.activityId}`)
           return
         }
       } else {
@@ -209,7 +209,7 @@ export function CheckoutPage() {
           }
         }
         if (!matchedActivity || !matchedGroup) {
-          setMessage(`未找到拼团 #${groupBuyMode.groupId}，可能已成团或失效`)
+          setMessage(`未找到拼团 ${groupBuyMode.groupId}，可能已成团或失效`)
           return
         }
       }
@@ -449,8 +449,8 @@ export function CheckoutPage() {
             description={createdInfo || '订单已提交，二维码生成期间请不要重复刷新页面。'}
           />
           <div className="checkout-payment-meta">
-            <Text type="secondary">支付单 #{createdPaymentId}</Text>
-            <Text type="secondary">订单 {createdOrderIds.map((id) => `#${id}`).join('、')}</Text>
+            <Text type="secondary">支付单 {createdPaymentId}</Text>
+            <Text type="secondary">订单 {createdOrderIds.map((id) => `${id}`).join('、')}</Text>
             {paymentDetail ? <Tag color={statusColor(paymentDetail.status)}>{statusText(paymentDetail.status)}</Tag> : null}
           </div>
           <Spin spinning={alipayLoading} tip="正在生成支付宝二维码">
@@ -710,7 +710,7 @@ export function CheckoutPage() {
                         ...checkout.available_full_discounts.map((activity) => ({
                           value: activity.id,
                           disabled: !activity.available,
-                          label: `#${activity.id} ${activity.name}｜减 ￥${yuan(activity.discount_amount_cent)}${activity.available ? '' : `｜${activity.unavailable_reason ?? '不可用'}`}`,
+                          label: `${activity.id} ${activity.name}｜减 ￥${yuan(activity.discount_amount_cent)}${activity.available ? '' : `｜${activity.unavailable_reason ?? '不可用'}`}`,
                         })),
                       ]}
                       className="checkout-promo-select"
@@ -730,7 +730,7 @@ export function CheckoutPage() {
                         ...checkout.available_coupons.map((coupon) => ({
                           value: coupon.id,
                           disabled: !coupon.available,
-                          label: `#${coupon.id} ${coupon.name}｜减 ￥${yuan(coupon.discount_amount_cent)}${coupon.available ? '' : `｜${coupon.unavailable_reason ?? '不可用'}`}`,
+                          label: `${coupon.id} ${coupon.name}｜减 ￥${yuan(coupon.discount_amount_cent)}${coupon.available ? '' : `｜${coupon.unavailable_reason ?? '不可用'}`}`,
                         })),
                       ]}
                       className="checkout-promo-select"

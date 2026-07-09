@@ -244,7 +244,7 @@ export function OrderDetailPage() {
     setChatOpen(true)
     setChatLoading(true)
     setChatTitle(target === 'merchant' ? '商家客服' : '平台客服')
-    setChatSubtitle(target === 'merchant' ? `店铺 #${order.merchant_id}` : `订单 ${order.order_no}`)
+    setChatSubtitle(target === 'merchant' ? `订单 ${order.order_no}` : `订单 ${order.order_no}`)
     try {
       const payload =
         target === 'merchant'
@@ -379,8 +379,8 @@ export function OrderDetailPage() {
           {order ? (
             <Space wrap>
               <Badge color={statusColor(order.status)} text={statusText(order.status)} />
-              <Tag>订单 #{order.id}</Tag>
-              <Tag>支付单 #{order.payment_id}</Tag>
+              <Tag>订单 {order.id}</Tag>
+              <Tag>支付单 {order.payment_id}</Tag>
             </Space>
           ) : null}
         </div>
@@ -407,8 +407,7 @@ export function OrderDetailPage() {
                     {(order.merchant_name || '店铺')[0]}
                   </Avatar>
                   <div className="od2-merchant-info">
-                    <Text strong>{order.merchant_name || `店铺 #${order.merchant_id}`}</Text>
-                    <Text type="secondary">店铺 #{order.merchant_id}</Text>
+                    <Text strong>{order.merchant_name || '未知商家'}</Text>
                   </div>
                 </div>
               </div>
@@ -481,7 +480,7 @@ export function OrderDetailPage() {
                         <div className="od2-item-info">
                           <Text strong>{item.product_name}</Text>
                           <Text type="secondary">
-                            明细 #{item.id} · SKU #{item.sku_id} · {item.sku_name}
+                            明细 {item.id} · SKU {item.sku_id} · {item.sku_name}
                           </Text>
                         </div>
                         <div className="od2-item-price">
@@ -496,7 +495,7 @@ export function OrderDetailPage() {
 
                 <Card className="od2-card" title="收货与物流">
                   <Descriptions column={1} size="small" bordered>
-                    <Descriptions.Item label="商家">{order.merchant_name || `店铺 #${order.merchant_id}`}</Descriptions.Item>
+                    <Descriptions.Item label="商家">{order.merchant_name || '未知商家'}</Descriptions.Item>
                     <Descriptions.Item label="收货人">
                       {order.shipping_address
                         ? `${order.shipping_address.receiver_name} ${order.shipping_address.receiver_mobile}`
@@ -597,7 +596,7 @@ export function OrderDetailPage() {
                     onChange={(value) => setSelectedReviewOrderItemId(value as number)}
                     options={order.items.map((item) => ({
                       value: item.id,
-                      label: `#${item.id} ${item.product_name} x${item.quantity}`,
+                      label: `${item.id} ${item.product_name} x${item.quantity}`,
                     }))}
                   />
                 </div>
@@ -656,7 +655,7 @@ export function OrderDetailPage() {
                     }}
                     options={order.items.map((item) => ({
                       value: item.id,
-                      label: `#${item.id} ${item.product_name} x${item.quantity}`,
+                      label: `${item.id} ${item.product_name} x${item.quantity}`,
                     }))}
                   />
                 </div>

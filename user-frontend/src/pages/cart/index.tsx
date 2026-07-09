@@ -131,7 +131,7 @@ export function CartPage() {
       } else {
         groups.set(item.merchant_id, {
           merchant_id: item.merchant_id,
-          merchant_name: item.merchant_name || `店铺 #${item.merchant_id}`,
+          merchant_name: item.merchant_name || '未知商家',
           merchant_logo_url: item.merchant_logo_url,
           items: [item],
         })
@@ -225,7 +225,7 @@ export function CartPage() {
                     </Avatar>
                     <div className="cart-merchant-title">
                       <Text strong>{group.merchant_name}</Text>
-                      <Text type="secondary">店铺 #{group.merchant_id} · {group.items.length} 件商品</Text>
+                      <Text type="secondary">{group.items.length} 件商品</Text>
                     </div>
                   </div>
                   <div className="cart-merchant-items">

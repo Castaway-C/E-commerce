@@ -150,7 +150,7 @@ export function MerchantPage() {
                 </div>
               )}
               <div className="shop-hero-info">
-                <h1 className="shop-name">{merchant?.name ?? `店铺 #${numericMerchantId}`}</h1>
+                <h1 className="shop-name">{merchant?.name ?? '未知店铺'}</h1>
                 <div className="shop-hero-meta">
                   <Tag className="shop-tag-stat">在售 {total}</Tag>
                   <Tag className="shop-tag-follow">

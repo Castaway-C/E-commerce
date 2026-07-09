@@ -411,11 +411,12 @@ export function ProductPage() {
           ) : (
             <>
               <div className="product-grid">
-                {products.map((product) => (
+                {products.map((product, index) => (
                   <Link
                     to={`/products/${product.id}`}
                     key={product.id}
                     className="product-card-link"
+                    style={{ animationDelay: `${0.3 + index * 0.04}s` }}
                   >
                     <Card
                       hoverable
@@ -434,6 +435,7 @@ export function ProductPage() {
                               <Text type="secondary">暂无图片</Text>
                             </div>
                           )}
+                          <div className="pec-cover-view">查看详情 →</div>
                         </div>
                       }
                     >

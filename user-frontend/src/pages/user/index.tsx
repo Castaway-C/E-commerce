@@ -50,6 +50,7 @@ import { authService, type MemberLevel, type PointsAccount, type PointsLog, type
 import { communityService, type CommunityFavoritePostItem, type CommunityPost, type CommunityComment } from '../../services/community'
 import { productService, type MerchantFollowItem, type ProductFavoriteItem } from '../../services/product'
 import { promotionService, type CouponTemplate, type UserCoupon } from '../../services/promotion'
+import ImgCrop from 'antd-img-crop'
 import { uploadService } from '../../services/upload'
 import { getApiErrorMessage } from '../../services/http'
 import { absoluteAssetUrl, pickErrorMessage, statusText, yuan } from '../../utils/format'
@@ -497,18 +498,20 @@ export function UserCenterPage() {
         <div className="uc-hero">
           <div className="uc-hero-bg" />
           <div className="uc-hero-content">
-            <Upload {...uploadProps}>
-              <div className="uc-avatar-wrap">
-                <Avatar
-                  size={80}
-                  src={absoluteAssetUrl(profileAvatarUrl) || undefined}
-                  className="uc-avatar"
-                >
-                  {profile?.nickname?.slice(0, 1) ?? 'U'}
-                </Avatar>
-                <div className="uc-avatar-edit"><EditOutlined /></div>
-              </div>
-            </Upload>
+            <ImgCrop cropShape="round" aspect={1} modalTitle="裁剪头像" modalOk="确定" modalCancel="取消">
+              <Upload {...uploadProps}>
+                <div className="uc-avatar-wrap">
+                  <Avatar
+                    size={80}
+                    src={absoluteAssetUrl(profileAvatarUrl) || undefined}
+                    className="uc-avatar"
+                  >
+                    {profile?.nickname?.slice(0, 1) ?? 'U'}
+                  </Avatar>
+                  <div className="uc-avatar-edit"><EditOutlined /></div>
+                </div>
+              </Upload>
+            </ImgCrop>
             <div className="uc-hero-info">
               <div className="uc-hero-name-row">
                 <h1 className="uc-hero-name">{profile?.nickname ?? '用户'}</h1>
@@ -1084,7 +1087,7 @@ export function UserCenterPage() {
       {/* ── Create/Edit Address Modal ── */}
       <Modal
         open={addressModalOpen}
-        title={editingAddressId ? `编辑地址 #${editingAddressId}` : '新增收货地址'}
+        title={editingAddressId ? `编辑地址 ${editingAddressId}` : '新增收货地址'}
         onCancel={closeAddressModal}
         width={640}
         footer={[

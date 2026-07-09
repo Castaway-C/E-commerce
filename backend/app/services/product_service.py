@@ -662,6 +662,12 @@ class ProductService:
         await db.commit()
         return await self.get_product_detail(db, product_id, include_off_sale=True)
 
+    async def delete_product_for_admin(self, db: AsyncSession, admin: AdminUser, product_id: int) -> Product:
+        product = await self.get_product_detail_for_admin(db, admin, product_id)
+        product.status = "deleted"
+        await db.commit()
+        return product
+
     async def batch_update_product_status_for_admin(
         self,
         db: AsyncSession,
@@ -742,7 +748,7 @@ class ProductService:
             selectinload(Product.category),
             selectinload(Product.skus),
             selectinload(Product.images),
-        )
+        ).where(Product.status != "deleted")
         if not include_off_sale:
             statement = statement.where(Product.status == "on_sale")
         return statement

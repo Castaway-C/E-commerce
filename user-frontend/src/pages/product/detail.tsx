@@ -482,7 +482,7 @@ export function ProductDetailPage() {
                             <Avatar size="small" src={absoluteAssetUrl(review.user_avatar_url)}>
                               {review.user_nickname?.[0] ?? '用'}
                             </Avatar>
-                            <Text type="secondary">{review.user_nickname || `用户 #${review.user_id}`}</Text>
+                            <Text type="secondary">{review.user_nickname || `用户 ${review.user_id}`}</Text>
                           </Space>
                           <Rate disabled value={review.score} className="detail-rate-sm" />
                         </div>

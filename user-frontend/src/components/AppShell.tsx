@@ -7,7 +7,6 @@ import { authService, type UserProfile } from '../services/auth'
 import { USER_AUTH_CHANGED_EVENT } from '../services/http'
 import { absoluteAssetUrl } from '../utils/format'
 import { AiAssistantWidget } from './AiAssistantWidget'
-import mygoIcon from '../styles/MyGO_icon.svg'
 import logoMygo from '../styles/Logo_mygo.svg'
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -54,8 +53,8 @@ export function AppShell({ children }: { children: ReactNode }) {
       {!isAuthPage && (
         <nav className="app-nav">
           <Link className="brand-link" to="/">
-            <span className="brand-mark-box"><img className="brand-mark" src={mygoIcon} alt="MyGO" /></span>
-            <img className="brand-logo" src={logoMygo} alt="一次买够" />
+            <img className="brand-mark" src={logoMygo} alt="MyGO" />
+            <span className="brand-name">一次买够</span>
           </Link>
           <div className="nav-links">
             <Link to="/">首页</Link>
