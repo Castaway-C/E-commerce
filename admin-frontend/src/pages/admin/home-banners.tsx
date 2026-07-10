@@ -93,7 +93,7 @@ export function AdminHomeBannersPage() {
   async function submitBanner(values: BannerFormValues) {
     setSubmitting(true)
     const payload: HomeBannerPayload = {
-      title: values.title,
+      title: values.title ?? '',
       subtitle: values.subtitle || null,
       image_url: values.image_url,
       target_type: values.target_type ?? 'none',
@@ -247,7 +247,7 @@ export function AdminHomeBannersPage() {
 
       <Card className="section-card" title={editingBanner ? `编辑轮播 #${editingBanner.id}` : '新增轮播'}>
         <Form form={form} layout="vertical" onFinish={(values) => void submitBanner(values as BannerFormValues)}>
-          <Form.Item label="标题" name="title" rules={[{ required: true, message: '请输入标题' }]}>
+          <Form.Item label="标题" name="title">
             <Input placeholder="例如：夏日好物专场" />
           </Form.Item>
           <Form.Item label="副标题" name="subtitle">

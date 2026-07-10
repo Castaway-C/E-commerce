@@ -457,7 +457,6 @@ export function CheckoutPage() {
             {alipayQrCode ? (
               <div className="checkout-qrcode-box">
                 <QRCode value={alipayQrCode} size={192} />
-                <Text type="secondary">请使用支付宝沙箱买家账号扫码</Text>
               </div>
             ) : (
               <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={alipayLoading ? '正在生成二维码' : '二维码暂不可用'} />

@@ -16,7 +16,7 @@ import { FireOutlined, TeamOutlined, ShoppingOutlined } from '@ant-design/icons'
 
 import { getApiErrorMessage } from '../../services/http'
 import { groupBuyService, type GroupBuyActivity } from '../../services/groupBuy'
-import { absoluteAssetUrl, statusColor, statusText, yuan } from '../../utils/format'
+import { absoluteAssetUrl, statusText, yuan } from '../../utils/format'
 
 const { Text, Title, Paragraph } = Typography
 
@@ -92,7 +92,6 @@ export function GroupBuyPage() {
                       <div className="gb-ac-info">
                         <div className="gb-ac-tags">
                           <Tag className="gb-tag-group-size"><TeamOutlined /> {activity.group_size} 人团</Tag>
-                          <Tag color={statusColor(activity.status)}>{statusText(activity.status)}</Tag>
                         </div>
                         <Text strong ellipsis className="gb-ac-name" title={activity.name}>
                           {activity.name}

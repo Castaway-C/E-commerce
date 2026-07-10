@@ -23,6 +23,15 @@ function metricValue(metric?: ReportMetric) {
   return metric.unit === 'cent' ? yuan(Number(metric.value)) : metric.value
 }
 
+function money(valueCent?: number | null) {
+  return `￥${yuan(valueCent)}`
+}
+
+function metricDisplayValue(metric?: ReportMetric) {
+  if (!metric) return 0
+  return metric.unit === 'cent' ? money(Number(metric.value)) : metric.value
+}
+
 function getMetric(items: ReportMetric[], key: string) {
   return items.find((item) => item.key === key)
 }
@@ -239,7 +248,11 @@ export function ReportOverviewPanel({ report, loading, scopeLabel, extra }: Prop
 
   const topProductColumns: ColumnsType<ReportTopProduct> = [
     { title: '商品 ID', dataIndex: 'product_id', width: 90 },
-    { title: '商品', dataIndex: 'product_name' },
+    {
+      title: '商品',
+      dataIndex: 'product_name',
+      render: (value) => <span className="report-top-product-name" title={value}>{value}</span>,
+    },
     { title: '销量', dataIndex: 'quantity', width: 90 },
     { title: '成交额', dataIndex: 'amount_cent', width: 120, render: (value) => `￥${yuan(value)}` },
   ]
@@ -273,15 +286,15 @@ export function ReportOverviewPanel({ report, loading, scopeLabel, extra }: Prop
         }
       >
         <Row gutter={[16, 16]}>
-          <Col xs={24} sm={12} lg={6}><Statistic title="成交额" prefix="￥" value={metricValue(getMetric(summary, 'gmv_cent'))} /></Col>
-          <Col xs={24} sm={12} lg={6}><Statistic title="有效订单" value={metricValue(getMetric(summary, 'paid_order_count'))} /></Col>
-          <Col xs={24} sm={12} lg={6}><Statistic title="商品数" value={metricValue(getMetric(summary, 'product_count'))} /></Col>
-          <Col xs={24} sm={12} lg={6}><Statistic title="售后数" value={metricValue(getMetric(summary, 'refund_count'))} /></Col>
+          <Col xs={24} sm={12} lg={6}><Statistic className="report-stat report-stat-money" title="成交额" value={metricDisplayValue(getMetric(summary, 'gmv_cent'))} /></Col>
+          <Col xs={24} sm={12} lg={6}><Statistic className="report-stat" title="有效订单" value={metricValue(getMetric(summary, 'paid_order_count'))} /></Col>
+          <Col xs={24} sm={12} lg={6}><Statistic className="report-stat" title="商品数" value={metricValue(getMetric(summary, 'product_count'))} /></Col>
+          <Col xs={24} sm={12} lg={6}><Statistic className="report-stat" title="售后数" value={metricValue(getMetric(summary, 'refund_count'))} /></Col>
         </Row>
         <Row gutter={[16, 16]} className="report-efficiency-row">
-          <Col xs={24} sm={8}><Statistic title="客单价" prefix="￥" value={yuan(averageOrderCent)} /></Col>
-          <Col xs={24} sm={8}><Statistic title="售后率" value={refundRate} /></Col>
-          <Col xs={24} sm={8}><Statistic title="退款金额占比" value={refundAmountRate} /></Col>
+          <Col xs={24} sm={8}><Statistic className="report-stat report-stat-money" title="客单价" value={money(averageOrderCent)} /></Col>
+          <Col xs={24} sm={8}><Statistic className="report-stat" title="售后率" value={refundRate} /></Col>
+          <Col xs={24} sm={8}><Statistic className="report-stat" title="退款金额占比" value={refundAmountRate} /></Col>
         </Row>
       </Card>
 
@@ -303,7 +316,7 @@ export function ReportOverviewPanel({ report, loading, scopeLabel, extra }: Prop
         </Col>
         <Col xs={24} xl={10}>
           <Card title="Top 商品明细">
-            <Table rowKey="product_id" size="small" columns={topProductColumns} dataSource={report?.top_products ?? []} pagination={false} />
+            <Table rowKey="product_id" size="small" columns={topProductColumns} dataSource={(report?.top_products ?? []).slice(0, 5)} pagination={false} />
           </Card>
         </Col>
         {report?.scope === 'platform' ? (

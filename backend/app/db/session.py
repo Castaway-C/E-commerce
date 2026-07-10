@@ -5,7 +5,12 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from app.core.config import settings
 
-engine = create_async_engine(settings.database_url, echo=settings.app_env == "development")
+engine = create_async_engine(
+    settings.database_url,
+    echo=settings.app_env == "development",
+    pool_pre_ping=settings.database_url.startswith("mysql"),
+    pool_recycle=1800 if settings.database_url.startswith("mysql") else -1,
+)
 AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
 
 
@@ -333,4 +338,3 @@ async def _patch_sqlite_user_address_columns(conn) -> None:
     for column_name, column_type in columns.items():
         if column_name not in existing_columns:
             await conn.execute(text(f"ALTER TABLE user_address ADD COLUMN {column_name} {column_type}"))
-

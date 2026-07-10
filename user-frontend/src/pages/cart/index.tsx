@@ -255,9 +255,6 @@ export function CartPage() {
                           {(item.source_label || item.source_post_id) && (
                             <div className="cart-item-source">
                               {item.source_label ? <Tag color="purple">{item.source_label}</Tag> : null}
-                              {item.source_post_id ? (
-                                <Tag color="purple">种草来源</Tag>
-                              ) : null}
                             </div>
                           )}
                           {item.invalid_reason ? (

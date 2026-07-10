@@ -795,6 +795,8 @@ class OrderService:
         return self._payment_to_response(payment)
 
     async def pay_payment(self, db: AsyncSession, user: User, payment_id: int) -> PaymentResponse:
+        if not settings.payment_mock_enabled:
+            raise AppException(40005, "模拟支付未开启，请在后端 .env 设置 PAYMENT_MOCK_ENABLED=true 后重启服务")
         payment = await self._get_payment_with_orders(db, payment_id)
         if payment is None:
             raise AppException(40004, "支付单不存在", 404)
@@ -845,6 +847,15 @@ class OrderService:
             raise AppException(40004, "支付单不存在", 404)
         if payment.user_id != user.id:
             raise ForbiddenException()
+        if settings.payment_mock_enabled:
+            if payment.status == "unpaid":
+                await self._mark_payment_paid(db, payment, channel="mock")
+                await db.flush()
+                await db.commit()
+                payment = await self._get_payment_with_orders(db, payment_id)
+                if payment is None:
+                    raise AppException(40004, "支付单不存在", 404)
+            return self._payment_to_response(payment)
         result = await alipay_service.query(payment)
         if result.get("trade_status") in alipay_service.SUCCESS_TRADE_STATUS:
             await self._mark_payment_paid(
@@ -855,6 +866,9 @@ class OrderService:
                 buyer_logon_id=result.get("buyer_logon_id"),
             )
             await db.commit()
+            payment = await self._get_payment_with_orders(db, payment_id)
+            if payment is None:
+                raise AppException(40004, "支付单不存在", 404)
         return self._payment_to_response(payment)
 
     async def handle_alipay_notify(self, db: AsyncSession, payload: dict[str, str]) -> bool:
@@ -1434,17 +1448,20 @@ class OrderService:
                         if product:
                             product.sales_count += item.quantity
         await self._sync_paid_group_buy_participants(db, payment)
+        await db.flush()
         from app.services.group_buy_service import group_buy_service
 
         await group_buy_service.sync_groups_for_payment(db, payment)
 
     async def mark_group_success_orders(self, db: AsyncSession, group_id: int) -> None:
         result = await db.execute(
-            select(Order).where(
+            select(Order)
+            .where(
                 Order.group_buy_group_id == group_id,
                 Order.order_type == "group_buy",
                 Order.status == "group_pending",
             )
+            .options(selectinload(Order.items))
         )
         for order in result.scalars():
             order.status = "pending_shipment"

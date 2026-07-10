@@ -64,7 +64,7 @@ class CategoryResponse(BaseModel):
 
 
 class HomeBannerCreateRequest(BaseModel):
-    title: str = Field(min_length=1, max_length=80)
+    title: str = Field(default="", max_length=80)
     subtitle: str | None = Field(default=None, max_length=160)
     image_url: str = Field(min_length=1, max_length=255)
     target_type: str = Field(default="none", pattern="^(none|product|url)$")
@@ -75,7 +75,7 @@ class HomeBannerCreateRequest(BaseModel):
 
 
 class HomeBannerUpdateRequest(BaseModel):
-    title: str | None = Field(default=None, min_length=1, max_length=80)
+    title: str | None = Field(default=None, max_length=80)
     subtitle: str | None = Field(default=None, max_length=160)
     image_url: str | None = Field(default=None, min_length=1, max_length=255)
     target_type: str | None = Field(default=None, pattern="^(none|product|url)$")

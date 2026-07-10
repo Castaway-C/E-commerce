@@ -701,6 +701,42 @@ pre {
   border-top: 1px solid var(--hairline-soft);
 }
 
+.report-stat .ant-statistic-content {
+  max-width: 100%;
+  overflow: hidden;
+  line-height: 1.15;
+  word-break: break-all;
+}
+
+.report-stat-money .ant-statistic-content {
+  font-size: clamp(20px, 2vw, 26px);
+  white-space: normal;
+}
+
+.report-stat-money .ant-statistic-content-value {
+  display: inline;
+}
+
+.dashboard-money-stat .ant-statistic-content {
+  font-size: clamp(15px, 1.55vw, 24px);
+  white-space: nowrap;
+}
+
+.dashboard-money-stat .ant-statistic-content-value {
+  display: inline-block;
+  max-width: 100%;
+  white-space: nowrap;
+}
+
+.report-top-product-name {
+  display: -webkit-box;
+  max-height: 42px;
+  overflow: hidden;
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
 /* 客服工作台 */
 .admin-cs-card {
   overflow: hidden;

@@ -30,9 +30,6 @@ export function PortalPage() {
         <section className="hero-banner">
           <div className="hero-label">一次买够运营端</div>
           <h1 className="hero-title">平台端与商家端</h1>
-          <Paragraph className="portal-hero-desc">
-            分别进入平台后台、商家后台或商家入驻页；未授权时系统会自动引导到对应身份页面。
-          </Paragraph>
         </section>
 
         <section className="portal-cards">

@@ -60,7 +60,6 @@ export function AdminDashboardPage() {
         <Col span={4}><Card><Statistic title="用户" value={summary?.user_count ?? 0} /></Card></Col>
         <Col span={4}><Card><Statistic title="商品" value={summary?.product_count ?? 0} /></Card></Col>
         <Col span={4}><Card><Statistic title="订单" value={summary?.order_count ?? 0} /></Card></Col>
-        <Col span={4}><Card><Statistic title="成交额" value={yuan(summary?.gross_merchandise_cent)} prefix="￥" /></Card></Col>
         <Col span={4}><Card><Statistic title="待发货" value={summary?.pending_shipment_count ?? 0} /></Card></Col>
         <Col span={4}><Card><Statistic title="售后" value={summary?.after_sale_count ?? 0} /></Card></Col>
       </Row>

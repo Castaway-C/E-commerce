@@ -21,13 +21,12 @@ import {
   ShoppingCartOutlined,
   ArrowLeftOutlined,
   FireOutlined,
-  ShopOutlined,
   CustomerServiceOutlined,
   CloseOutlined,
   SendOutlined,
 } from '@ant-design/icons'
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { authService } from '../../services/auth'
 import {
   customerService,
@@ -57,10 +56,12 @@ type PageData<T> = {
 export function ProductDetailPage() {
   const params = useParams<{ productId: string }>()
   const [searchParams] = useSearchParams()
+  const location = useLocation()
   const navigate = useNavigate()
   const productId = params.productId ? Number(params.productId) : NaN
   const sourcePostId = searchParams.get('source_post_id') ? Number(searchParams.get('source_post_id')) : undefined
   const groupBuyActivityId = searchParams.get('group_buy_activity_id') ? Number(searchParams.get('group_buy_activity_id')) : undefined
+  const backToProductList = (location.state as { from?: string } | null)?.from ?? '/'
 
   const [product, setProduct] = useState<ProductDetail | null>(null)
   const [reviews, setReviews] = useState<ProductReview[]>([])
@@ -260,7 +261,7 @@ export function ProductDetailPage() {
     return (
       <div className="detail-page">
         <Empty description="商品 ID 无效">
-          <Link to="/products">返回商品列表</Link>
+          <Link to={backToProductList}>返回商品列表</Link>
         </Empty>
       </div>
     )
@@ -270,7 +271,7 @@ export function ProductDetailPage() {
     <div className="detail-page">
       {/* ── Breadcrumb ── */}
       <div className="detail-breadcrumb">
-        <Link to="/products"><ArrowLeftOutlined /> 返回商品列表</Link>
+        <Link to={backToProductList}><ArrowLeftOutlined /> 返回商品列表</Link>
       </div>
 
       <Skeleton loading={loading} active paragraph={{ rows: 8 }}>
@@ -323,7 +324,13 @@ export function ProductDetailPage() {
 
                 {/* Merchant Card */}
                 <Link to={`/merchants/${product.merchant.id}`} className="detail-merchant-card">
-                  <ShopOutlined className="detail-merchant-icon" />
+                  <Avatar
+                    size={44}
+                    src={product.merchant.logo_url ? absoluteAssetUrl(product.merchant.logo_url) : undefined}
+                    className="detail-merchant-avatar"
+                  >
+                    {product.merchant.name?.slice(0, 1) || '店'}
+                  </Avatar>
                   <div className="detail-merchant-info">
                     <span className="detail-merchant-name">{product.merchant.name}</span>
                     <span className="detail-merchant-action">进店逛逛 →</span>
@@ -519,7 +526,7 @@ export function ProductDetailPage() {
                 className="detail-tab-card"
                 title={<span className="detail-tab-title">图文详情</span>}
               >
-                <Paragraph style={{ whiteSpace: 'pre-line' }}>{product.description || '暂无文字介绍'}</Paragraph>
+                <Paragraph style={{ whiteSpace: 'pre-line' }}>{product.description}</Paragraph>
                 {product.detail_images && product.detail_images.length > 0 ? (
                   <div className="detail-content-images">
                     {product.detail_images.map((url, index) => (
@@ -602,7 +609,7 @@ export function ProductDetailPage() {
           </>
         ) : (
           <Empty description="商品不存在或已下架">
-            <Link to="/products">返回商品列表</Link>
+            <Link to={backToProductList}>返回商品列表</Link>
           </Empty>
         )}
       </Skeleton>

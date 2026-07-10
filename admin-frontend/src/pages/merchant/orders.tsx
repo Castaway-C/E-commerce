@@ -292,7 +292,7 @@ export function MerchantOrdersPage() {
                     shippingForm.setFieldValue('tracking_no', mockTrackingNo(company))
                   }}
                 >
-                  生成模拟单号
+                  生成快递单号
                 </Button>
                 <Button
                   type="primary"

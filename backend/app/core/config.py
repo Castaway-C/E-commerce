@@ -39,6 +39,7 @@ class Settings(BaseSettings):
     celery_cancel_unpaid_interval_seconds: int = 300
     celery_expire_coupon_interval_seconds: int = 300
     celery_auto_confirm_interval_seconds: int = 3600
+    payment_mock_enabled: bool = False
     alipay_enabled: bool = False
     alipay_gateway_url: str = "https://openapi-sandbox.dl.alipaydev.com/gateway.do"
     alipay_app_id: str | None = None

@@ -212,7 +212,11 @@ class CustomerServiceService:
         page: int,
         page_size: int,
     ) -> tuple[list[CustomerServiceConversationResponse], int]:
-        statement = statement.order_by(CustomerServiceConversation.last_message_at.desc().nullslast(), CustomerServiceConversation.updated_at.desc())
+        statement = statement.order_by(
+            CustomerServiceConversation.last_message_at.is_(None),
+            CustomerServiceConversation.last_message_at.desc(),
+            CustomerServiceConversation.updated_at.desc(),
+        )
         all_result = await db.execute(statement)
         all_conversations = list(all_result.scalars())
         result = await db.execute(statement.offset((page - 1) * page_size).limit(page_size))
@@ -244,6 +248,7 @@ class CustomerServiceService:
         conversation.last_message_at = now
         db.add(message)
         await db.flush()
+        await db.refresh(message)
         return message
 
     async def _create_auto_reply(self, db: AsyncSession, conversation: CustomerServiceConversation) -> None:
@@ -391,6 +396,13 @@ class CustomerServiceService:
         if message.sender_type == "user":
             user = await db.get(User, message.sender_id)
             sender_name = user.nickname if user else None
+        elif message.sender_id == 0:
+            if message.sender_type == "platform":
+                sender_name = "一次买够平台客服"
+            else:
+                conversation = await db.get(CustomerServiceConversation, message.conversation_id)
+                merchant = await db.get(Merchant, conversation.merchant_id) if conversation and conversation.merchant_id else None
+                sender_name = f"{merchant.name}客服" if merchant else "商家客服"
         else:
             admin = await db.get(AdminUser, message.sender_id)
             sender_name = admin.real_name if admin else None

@@ -8,6 +8,7 @@ from app.core.exceptions import AppException, ForbiddenException
 from app.core.security import hash_password
 from app.models.community import CommunityComment, CommunityLike, CommunityPost, CommunityPostFavorite
 from app.models.order import Order, OrderItem
+from app.models.product import Merchant
 from app.models.user import AdminUser, User
 from app.schemas.community import (
     AuthorSummary,
@@ -345,6 +346,15 @@ class CommunityService:
         current_user_id: int | None = None,
     ) -> PostResponse:
         author = await db.get(User, post.user_id)
+        display_author = self._author_to_summary(author)
+        if post.merchant_id is not None:
+            merchant = await db.get(Merchant, post.merchant_id)
+            if merchant is not None:
+                display_author = AuthorSummary(
+                    id=author.id if author is not None else 0,
+                    nickname=merchant.name,
+                    avatar_url=merchant.logo_url,
+                )
         return PostResponse(
             id=post.id,
             merchant_id=post.merchant_id,
@@ -356,7 +366,7 @@ class CommunityService:
             product_ids=json.loads(post.product_ids or "[]"),
             topic_tags=json.loads(post.topic_tags or "[]"),
             status=post.status,
-            author=self._author_to_summary(author),
+            author=display_author,
             like_count=await self._count_likes(db, post.id),
             favorite_count=await self._count_favorites(db, post.id),
             favorited=await self._is_favorited(db, current_user_id, post.id),

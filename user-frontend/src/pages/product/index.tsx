@@ -17,7 +17,7 @@ import {
 import { LeftOutlined, ReloadOutlined, RightOutlined, SearchOutlined } from '@ant-design/icons'
 import type { CarouselRef } from 'antd/es/carousel'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { getApiErrorMessage } from '../../services/http'
 import { homeService, type HomeBanner } from '../../services/home'
 import {
@@ -51,16 +51,27 @@ type PageData<T> = {
 
 export function ProductPage() {
   const bannerCarouselRef = useRef<CarouselRef>(null)
+  const didRunFilterEffect = useRef(false)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const initialCategoryId = searchParams.get('category_id') ? Number(searchParams.get('category_id')) : undefined
+  const initialMinPrice = searchParams.get('min_price') ? Number(searchParams.get('min_price')) : null
+  const initialMaxPrice = searchParams.get('max_price') ? Number(searchParams.get('max_price')) : null
+  const initialPage = searchParams.get('page') ? Number(searchParams.get('page')) : 1
+  const initialPageSize = searchParams.get('page_size') ? Number(searchParams.get('page_size')) : 12
   const [categories, setCategories] = useState<Category[]>([])
   const [banners, setBanners] = useState<HomeBanner[]>([])
-  const [categoryId, setCategoryId] = useState<number | undefined>()
-  const [keyword, setKeyword] = useState('')
-  const [minPriceYuan, setMinPriceYuan] = useState<number | null>(null)
-  const [maxPriceYuan, setMaxPriceYuan] = useState<number | null>(null)
-  const [productSort, setProductSort] = useState('newest:desc')
+  const [categoryId, setCategoryId] = useState<number | undefined>(
+    Number.isFinite(initialCategoryId) ? initialCategoryId : undefined,
+  )
+  const [keyword, setKeyword] = useState(searchParams.get('keyword') ?? '')
+  const [minPriceYuan, setMinPriceYuan] = useState<number | null>(Number.isFinite(initialMinPrice) ? initialMinPrice : null)
+  const [maxPriceYuan, setMaxPriceYuan] = useState<number | null>(Number.isFinite(initialMaxPrice) ? initialMaxPrice : null)
+  const [productSort, setProductSort] = useState(searchParams.get('sort') ?? 'sales:desc')
   const [products, setProducts] = useState<ProductListItem[]>([])
-  const [productPage, setProductPage] = useState(1)
-  const [productPageSize, setProductPageSize] = useState(12)
+  const [productPage, setProductPage] = useState(Number.isFinite(initialPage) && initialPage > 0 ? initialPage : 1)
+  const [productPageSize, setProductPageSize] = useState(
+    Number.isFinite(initialPageSize) && initialPageSize > 0 ? initialPageSize : 12,
+  )
   const [productTotal, setProductTotal] = useState(0)
   const [loading, setLoading] = useState(false)
 
@@ -178,15 +189,41 @@ export function ProductPage() {
     }
   }
 
+  function syncProductQuery(nextCategoryId = categoryId, nextPage = productPage, nextPageSize = productPageSize) {
+    const next = new URLSearchParams()
+    if (nextCategoryId) next.set('category_id', String(nextCategoryId))
+    if (keyword.trim()) next.set('keyword', keyword.trim())
+    if (minPriceYuan !== null) next.set('min_price', String(minPriceYuan))
+    if (maxPriceYuan !== null) next.set('max_price', String(maxPriceYuan))
+    if (productSort !== 'sales:desc') next.set('sort', productSort)
+    if (nextPage > 1) next.set('page', String(nextPage))
+    if (nextPageSize !== 12) next.set('page_size', String(nextPageSize))
+    setSearchParams(next, { replace: true })
+  }
+
+  function refreshProducts(nextCategoryId = categoryId, nextPage = productPage, nextPageSize = productPageSize) {
+    syncProductQuery(nextCategoryId, nextPage, nextPageSize)
+    void loadProducts(nextCategoryId, nextPage, nextPageSize)
+  }
+
+  function productListHref() {
+    const query = searchParams.toString()
+    return query ? `/?${query}` : '/'
+  }
+
   useEffect(() => {
     void loadBanners()
     void loadCategories()
-    void loadProducts(undefined, 1)
+    void loadProducts(categoryId, productPage, productPageSize)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
-    void loadProducts(categoryId, 1)
+    if (!didRunFilterEffect.current) {
+      didRunFilterEffect.current = true
+      return
+    }
+    refreshProducts(categoryId, 1)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categoryId, minPriceYuan, maxPriceYuan, productSort])
 
@@ -203,12 +240,12 @@ export function ProductPage() {
           placeholder="品质生活，从这里开始"
           value={keyword}
           onChange={(e) => setKeyword(e.target.value)}
-          onPressEnter={() => loadProducts(categoryId, 1)}
+          onPressEnter={() => refreshProducts(categoryId, 1)}
           className="product-search-bar"
           suffix={
             <SearchOutlined
               style={{ color: '#3598ff', fontSize: 18, cursor: 'pointer' }}
-              onClick={() => loadProducts(categoryId, 1)}
+              onClick={() => refreshProducts(categoryId, 1)}
             />
           }
         />
@@ -315,11 +352,7 @@ export function ProductPage() {
                 </Button>
               ))}
             </div>
-            {selectedCategoryPath.length > 0 ? (
-              <div className="filter-current-category">
-                {selectedCategoryPath.map((item) => item.name).join(' / ')}
-              </div>
-            ) : null}
+
             {visibleCategoryLevels.map((level) => (
               <div className="filter-subcategory-row" key={level.parent.id}>
                 <Text type="secondary" className="filter-subcategory-label">{level.parent.name}</Text>
@@ -374,10 +407,10 @@ export function ProductPage() {
               onChange={setProductSort}
               className="filter-sort-select"
               options={[
+                { value: 'sales:desc', label: '销量优先' },
                 { value: 'newest:desc', label: '最新上架' },
                 { value: 'price:asc', label: '价格升序' },
                 { value: 'price:desc', label: '价格降序' },
-                { value: 'sales:desc', label: '销量优先' },
               ]}
             />
           </div>
@@ -390,7 +423,8 @@ export function ProductPage() {
               setCategoryId(undefined)
               setMinPriceYuan(null)
               setMaxPriceYuan(null)
-              setProductSort('newest:desc')
+              setProductSort('sales:desc')
+              syncProductQuery(undefined, 1, 12)
             }}
             className="btn-filter-apply"
           >
@@ -414,6 +448,7 @@ export function ProductPage() {
                 {products.map((product, index) => (
                   <Link
                     to={`/products/${product.id}`}
+                    state={{ from: productListHref() }}
                     key={product.id}
                     className="product-card-link"
                     style={{ animationDelay: `${0.3 + index * 0.04}s` }}
@@ -471,7 +506,7 @@ export function ProductPage() {
                   total={productTotal}
                   showSizeChanger
                   showTotal={(total) => `共 ${total} 件商品`}
-                  onChange={(page, pageSize) => loadProducts(categoryId, page, pageSize)}
+                  onChange={(page, pageSize) => refreshProducts(categoryId, page, pageSize)}
                 />
               </div>
             </>
